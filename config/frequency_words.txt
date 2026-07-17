@@ -1,167 +1,141 @@
+
 # ═══════════════════════════════════════════════════════════════
+
 #                    TrendRadar 频率词配置文件
+
 #                         Version: 1.1.0
+
 # ═══════════════════════════════════════════════════════════════
 
 # 可视化配置编辑器地址: ``https://sansan0.github.io/TrendRadar/``
 #
+
 # 凡是左侧有 # 的都是仅供阅读的说明性文字
 #
+
 # 这个文件用来设置你想关注的新闻关键词。
+
 # 系统会自动抓取包含这些关键词的热榜新闻推送给你。
 #
+
 # 文件分为两个区域：
+
 #   [GLOBAL_FILTER]  - 全局过滤区：排除不想看的内容
+
 #   [WORD_GROUPS]    - 词组定义区：设置想关注的关键词
 #
+
 # ═══════════════════════════════════════════════════════════════
 
 # ───────────────────────────────────────────────────────────────
+
 #                        全局过滤区
+
 # ───────────────────────────────────────────────────────────────
+
 # 在这里写入你不想看到的词，每行一个。
+
 # 包含这些词的新闻会被自动排除，不会出现在推送中。
 #
+
 # 使用方法：
+
 #   震惊              直接写词，包含"震惊"的新闻会被过滤
+
 #   /赌博|博彩/       用 /.../ 包裹可以匹配多个词（用 | 分隔）
 
 [GLOBAL_FILTER]
+
 # 过滤标题党
 震惊
 震惊体
 标题党
-/10万+|100000\+/
-/速看|急转发|不看后悔/
+/10万+|100000\+|速看|急转发|不看后悔/
 
-# 过滤无关内容
-/彩票|赌博|博彩|棋牌/
-/股票推荐|炒股秘籍|牛股/
+# 过滤金融投资类（非硬件相关）
+/彩票|赌博|博彩|棋牌|股票推荐|炒股秘籍|牛股/
+/基金|理财|A股|美股|港股|牛市|熊市|涨停/
+/比特币|加密货币|区块链币|炒币/
+
+# 过滤房地产
+/楼市|房地产|房价|二手房|新房|土地流拍/
+
+# 过滤娱乐明星
+/娱乐|明星|综艺|八卦|选秀|偶像|粉丝应援/
+/电视剧|电影票房|演员|歌手|演唱会/
+
+# 过滤游戏电竞
+/电竞|游戏|手游|网游|王者荣耀|英雄联盟|原神/
+/游戏攻略|游戏评测|游戏更新/
+
+# 过滤体育
+/体育|足球|篮球|中超|NBA|CBA|世界杯|奥运会/
+
+# 过滤社会新闻
+/车祸|灾害|命案|杀人|案件|报警|诈骗案/
+
+# 过滤纯软件/互联网（非硬件）
+/小程序|公众号运营|短视频运营|直播带货/
+/App更新|软件版本|系统升级公告/
 
 # ───────────────────────────────────────────────────────────────
+
 #                        词组定义区
+
 # ───────────────────────────────────────────────────────────────
+
 # 在这里写入你想关注的关键词。
+
 # 每个词组用空行分隔，同一词组内的关键词是"或"的关系。
 #
+
 # ┌─────────────────────────────────────────────────────────────┐
+
 # │                      语法总览（快速参考）                      │
+
 # └─────────────────────────────────────────────────────────────┘
 #
+
 # 关键词语法：
+
 #   关键词            普通关键词，标题包含即匹配
+
 #   /正则/            正则表达式匹配（自动忽略大小写）
+
 #   关键词 => 别名    给关键词指定显示别名
+
 #   [组别名]          词组第一行，给整组指定别名
+
 #   +关键词           必须词，所有必须词都要匹配才算匹配
+
 #   !关键词           过滤词，匹配则排除该条新闻（仅限当前词组）
+
 #   @数字             限制该词组最多显示多少条
 #
+
 # 显示名称优先级：
+
 #   1. 有组别名 → 显示组别名
+
 #   2. 没有组别名 → 显示各行别名拼接（用 " / " 连接）
+
 #   3. 没有别名 → 显示关键词本身
 #
-#
-# ┌─────────────────────────────────────────────────────────────┐
-# │                      基础用法（推荐新手）                      │
-# └─────────────────────────────────────────────────────────────┘
-#
-# 1. 最简单：直接写关键词
-#    ────────────────────
-#    华为
-#
-#    效果：匹配所有包含"华为"的新闻
-#
-#
-# 2. 多个关键词归为一组
-#    ────────────────────
-#    华为
-#    鸿蒙
-#    任正非
-#
-#    效果：匹配包含"华为"或"鸿蒙"或"任正非"的新闻，统一显示为"华为 / 鸿蒙 / 任正非"
-#
-#
-# 3. 给词组起个名字（推荐）
-#    ────────────────────
-#    [华为]
-#    华为
-#    鸿蒙
-#    任正非
-#
-#    效果：同上，但显示名称为"华为"（更简洁）
-#
-#
-# ┌─────────────────────────────────────────────────────────────┐
-# │                      进阶用法（可选）                         │
-# └─────────────────────────────────────────────────────────────┘
-#
-# 4. 用正则表达式匹配多个词（一行搞定）
-#    ────────────────────
-#    /华为|鸿蒙|任正非/ => 华为
-#
-#    效果：匹配包含"华为"或"鸿蒙"或"任正非"的新闻，显示为"华为"
-#    说明：/.../ 里用 | 分隔多个词，=> 后面是显示名称
-#
-#    💡 不懂正则？问 AI：
-#       "帮我写一个正则表达式，匹配包含'华为'或'鸿蒙'或'任正非'的文本，
-#        格式要求：/正则/ => 显示名称"
-#
-#
-# 5. 精确匹配英文单词（避免误匹配）
-#    ────────────────────
-#    /\bAI\b/i => AI
-#
-#    说明：\b 表示单词边界，避免匹配到 "MAIL" 中的 "AI"
-#          /i 表示忽略大小写，"ai"、"AI"、"Ai" 都能匹配
-#
-#    💡 不懂正则？问 AI：
-#       "帮我写一个正则表达式，精确匹配英文单词'AI'（不匹配 MAIL 中的 AI），
-#        忽略大小写，格式要求：/正则/i => 显示名称"
-#
-#
-# 6. 排除特定内容
-#    ────────────────────
-#    [苹果公司]
-#    苹果
-#    !水果
-#    !果园
-#
-#    效果：匹配"苹果"但排除包含"水果"或"果园"的新闻
-#    说明：! 开头的词表示"排除"
-#
-#
-# 7. 限制显示条数
-#    ────────────────────
-#    [科技新闻]
-#    科技
-#    @5
-#
-#    效果：最多显示 5 条匹配的新闻
-#    说明：@数字 表示限制条数
-#
-#
-# 8. 必须同时包含多个词
-#    ────────────────────
-#    +苹果
-#    +发布会
-#
-#    效果：必须同时包含"苹果"和"发布会"才匹配
-#    说明：+ 开头的词表示"必须包含"
-#
+
 # ───────────────────────────────────────────────────────────────
 
 [WORD_GROUPS]
 
 # ═══════════════════════════════════════════════════════════════
-#                         机器人公司
+
+#                         机器人公司（精准匹配）
+
 # ═══════════════════════════════════════════════════════════════
 
 /宇树|王兴兴|\bUnitree\b/ => 宇树机器人
 /智元|灵犀|稚晖君|彭志辉|AgiBot/ => 智元机器人
 /众擎|EngineAI|赵同阳/ => 众擎机器人
-/特斯拉|马斯克|Optimus|擎天柱|\bTesla\b|\bElon Musk\b|\bCybertruck\b/ => 特斯拉
+/Optimus|擎天柱/ => 特斯拉Optimus
 /大疆|汪滔|灵眸|如影|\bDJI\b|\bRoboMaster\b|\bMavic\b|\bZenmuse\b/ => 大疆
 /优必选|Ubtech/ => 优必选
 /越疆|Dobot/ => 越疆
@@ -169,50 +143,43 @@
 /星动纪元|Robot Era/ => 星动纪元
 /银河通用|Galbot/ => 银河通用
 /逐际动力|LimX/ => 逐际动力
-/Figure|\b01\.AI\b/ => Figure AI
+/Figure AI|\b01\.AI\b/ => Figure AI
 /Boston Dynamics|波士顿动力/ => 波士顿动力
-/小米|CyberDog|铁大|铁二|雷军|\bXiaomi\b/ => 小米机器人
-/ sanctuary|Sanctuary AI|Phoenix/ => Sanctuary AI
-/1X|EVE|NEO/ => 1X机器人
-/Apptronik|Apollo/ => Apptronik
- agility|Agility Robotics|Digit/ => Agility Robotics
+/CyberDog|铁大|铁二/ => 小米机器人
+/Sanctuary AI|Phoenix robot/ => Sanctuary AI
+/1X robot|EVE robot|NEO robot/ => 1X机器人
+/Apptronik|Apollo robot/ => Apptronik
+/Agility Robotics|Digit robot/ => Agility Robotics
 
 # ═══════════════════════════════════════════════════════════════
-#                         AI 硬件品牌
+
+#                         AI 硬件品牌（只留硬件业务线）
+
 # ═══════════════════════════════════════════════════════════════
 
-/华为|任正非|余承东|鸿蒙|海思|昇腾|鲲鹏|\bHUAWEI\b|\bHarmonyOS\b|\bHiSilicon\b/ => 华为
-/苹果|库克|\biPhone\b|\biPad\b|\bMacBook\b|\biOS\b|\bVision Pro\b|\bAirPods\b|\bApple\b|\bTim Cook\b|\bApple Intelligence\b/ => 苹果
-/小米|雷军|红米|米家|米家智能家居|\bXiaomi\b|\bRedmi\b/ => 小米
-/Meta|扎克伯格|Quest|Ray-Ban|\bMeta\b|\bMark Zuckerberg\b/ => Meta
-/字节|PICO|抖音|\bByteDance\b|\bTikTok\b|\bPICO\b/ => 字节PICO
-/三星|Galaxy|\bSamsung\b/ => 三星
-/谷歌|Pixel|Google Glass|\bGoogle\b|\bPixel\b/ => 谷歌Pixel
-/OPPO|一加|AndesGPT|\bOPPO\b/ => OPPO
-/vivo|蓝心大模型|\bvivo\b/ => vivo
-/荣耀|\bHonor\b/ => 荣耀
-/联想|摩托罗拉|\bLenovo\b|\bMotorola\b/ => 联想
-/Insta360|影石|\bInsta360\b/ => 影石Insta360
-/Anker|安克|Eufy|Soundcore|\bAnker\b/ => 安克
+/Vision Pro|Apple Intelligence|\bAirPods\b/ => 苹果AI硬件
+/Quest|Ray-Ban|Meta智能眼镜|Meta Glasses/ => Meta硬件
+/PICO|PICO 4|PICO Ultra/ => 字节PICO
+/Google Glass|Project Astra|Google AI眼镜/ => 谷歌AI眼镜
+/Insta360|影石/ => 影石Insta360
+/Anker|安克|Eufy|Soundcore/ => 安克
 /雷鸟|雷鸟智能眼镜|TCL RayNeo/ => 雷鸟眼镜
 /Rokid|若琪/ => Rokid
 /XREAL|Nreal/ => XREAL
 /INMO|影目/ => 影目眼镜
-/小鹏|何小鹏|汇天|飞行汽车|\bXPeng\b/ => 小鹏
-/比亚迪|王传福|方程豹|腾势|仰望|\bBYD\b/ => 比亚迪
-/Nothing|Phone $1$|CMF/ => Nothing
-/荣耀|MagicV|Magic V/ => 荣耀折叠屏
-/BOE|京东方/ => 京东方
+/昇腾|海思|HarmonyOS Next/ => 华为AI硬件
 
 # ═══════════════════════════════════════════════════════════════
-#                         AI 硬件创业
+
+#                         AI 硬件创业公司（精准）
+
 # ═══════════════════════════════════════════════════════════════
 
-/Rabbit|\bR1\b|Rabbit R1/ => Rabbit R1
+/Rabbit R1|\bR1\b.*AI/ => Rabbit R1
 /Humane|Ai Pin|AI Pin/ => Humane Ai Pin
-/Plaud|NotePin|\bPlaud\b/ => Plaud
+/Plaud|NotePin/ => Plaud
 /Limitless|Tab AI|Rewind Pendant/ => Limitless Pendant
-/Friend|Friend AI 项链/ => Friend AI
+/Friend AI|Friend 项链/ => Friend AI
 /Catlog|物流机器人/ => Catlog
 /Evri|创想佩斯/ => Evri
 /光粒科技|Lightinion/ => 光粒AR
@@ -220,60 +187,36 @@
 /莫界|Moji/ => 莫界
 /奇点临近|Singularity/ => 奇点临近
 /星纪魅族|MYVU/ => 星纪魅族MYVU
-/跃动|Booster|机器人/ => 跃动机器人
-/Brilliant Labs|Frame|Monocle/ => Brilliant Labs
-/Even Realities|G1/ => Even G1
+/Brilliant Labs|Frame glasses|Monocle/ => Brilliant Labs
+/Even Realities|Even G1/ => Even G1
 /Solos|AirGo/ => Solos
-/Project Astra|Google AI眼镜/ => Google AI眼镜
-/MindLink|AI眼镜/ => MindLink
+/MindLink/ => MindLink
 
 # ═══════════════════════════════════════════════════════════════
-#                         芯片公司
+
+#                         AI 芯片公司（加排除，避免纯财报）
+
 # ═══════════════════════════════════════════════════════════════
 
-/英伟达|黄仁勋|\bNVIDIA\b|\bGeForce\b|\bRTX\b|\bCUDA\b|\bJetson\b|\bJensen Huang\b/ => 英伟达
-/苏姿丰|锐龙|霄龙|\bAMD\b|\bRyzen\b|\bEPYC\b|\bRadeon\b|\bLisa Su\b/ => AMD
-/高通|骁龙|\bQualcomm\b|\bSnapdragon\b/ => 高通
-/联发科|天玑|\bMediaTek\b|\bDimensity\b/ => 联发科
-/Intel|英特尔|酷睿|Core Ultra|Meteor Lake/ => 英特尔
-/Arm|安谋|\bArm\b/ => Arm
+[AI 芯片]
+/英伟达|黄仁勋|\bNVIDIA\b|\bJetson\b|\bJensen Huang\b/ => 英伟达
+/苏姿丰|\bAMD\b|\bRyzen\b.*AI|\bEPYC\b/ => AMD
+/骁龙|Snapdragon/ => 高通骁龙
+/天玑|Dimensity/ => 联发科天玑
+/Core Ultra|Meteor Lake|Intel.*AI/ => 英特尔AI
 /地平线|征程|Horizon Robotics/ => 地平线
-/黑芝麻|Black Sesame/ => 黑芝麻
 /寒武纪|Cambricon/ => 寒武纪
-/瑞芯微|Rockchip/ => 瑞芯微
-/晶晨|Amlogic/ => 晶晨
-/全志|Allwinner/ => 全志
+/NPU|AI加速器|AI芯片/ => AI加速芯片
+!财报
+!营收
+!季度财报
+!股价
+!市值
 
 # ═══════════════════════════════════════════════════════════════
-#                         国家与地区
-# ═══════════════════════════════════════════════════════════════
 
-[中国]
-国产
-中国
-国内
-华人
-
-[东亚]
-日本
-韩国
-东京
-首尔
-
-[北美]
-美国
-硅谷
-旧金山
-得州
-
-/俄罗斯|俄国/ => 俄罗斯
-/深圳|华强北/ => 深圳硬件
-/杭州|阿里|余杭/ => 杭州
-/上海|张江/ => 上海
-/北京|海淀|中关村/ => 北京
-
-# ═══════════════════════════════════════════════════════════════
 #                         展会与活动
+
 # ═══════════════════════════════════════════════════════════════
 
 [CES]
@@ -295,126 +238,81 @@ COMPUTEX
 [世界人工智能大会]
 WAIC
 世界人工智能大会
-人工智能大会
 
 [AWE]
 AWE
 中国家电及消费电子博览会
 
 # ═══════════════════════════════════════════════════════════════
-#                         AI 硬件品类
+
+#                         AI 硬件品类（收紧）
+
 # ═══════════════════════════════════════════════════════════════
 
 [AI 硬件]
 AI硬件
 智能硬件
-/(?<![a-zA-Z])ai(?![a-zA-Z])/i
-人工智能
+/Smart Hardware|Smart Device/i => 智能硬件
 
 [AI 眼镜]
 AI眼镜
 智能眼镜
 AR眼镜
-/Ray-Ban|Ray Ban|Meta智能眼镜/ => Ray-Ban Meta
-/MYVU|AR界/ => 智能眼镜
+/Ray-Ban Meta|Meta智能眼镜/ => Ray-Ban Meta
 /Smart Glasses|smartglasses/i => 智能眼镜
+/AR glasses/i => AR眼镜
 
 [AI 陪伴]
 AI陪伴
 AI玩具
-/AI 项链|AI Pin|智能胸针|智能项链/ => AI 可穿戴陪伴
-/机器人宠物|AI宠物/ => AI 宠物
+/AI 项链|AI Pin|智能胸针|智能项链/ => AI可穿戴陪伴
 /Companion robot|companion AI/i => 陪伴机器人
+/AI宠物|机器宠物/ => AI宠物
 
 [人形机器人]
 人形机器人
 /Humanoid/i => 人形机器人
-/Optimus|擎天柱/ => 人形机器人
-/双足|直立行走/ => 双足机器人
 /具身智能|Embodied AI|Embodied Intelligence/i => 具身智能
+/双足机器人|bipedal robot/i => 双足机器人
 
 [机器狗]
 机器狗
-/机械狗|四足/ => 机器狗
-/CyberDog|机械狗/ => 机器狗
-/Quadruped|robot dog/i => 四足机器人
+/机械狗|四足机器人|Quadruped|robot dog/i => 四足机器人
 
 [无人机]
 无人机
-/穿越机|FPV/ => 穿越机
-/Drone/i => 无人机
+/Drone|FPV|穿越机/i => 无人机
 
-[AR/VR]
+[AR/VR/MR]
 /\bAR\b|\bVR\b|\bMR\b|\bXR\b/ => AR/VR
-/Vision Pro|混合现实|空间计算/ => 空间计算
-/Quest|PICO|VR头显/ => VR头显
-/Mixed Reality|Spatial Computing/i => 空间计算
+/Vision Pro|空间计算|Spatial Computing/i => 空间计算
+/Quest|PICO|VR头显|VR headset/i => VR头显
+/Mixed Reality/i => 混合现实
 
-[可穿戴]
-可穿戴
-/Wearable/i => 可穿戴
-智能手表
-/Smartwatch/i => 智能手表
+[智能戒指]
 智能戒指
-/Smart Ring|SmartRing/i => 智能戒指
-智能手环
-/智能项链|智能徽章/ => 智能配件
-/fitness tracker|健康手环/i => 健康追踪
+/Smart Ring|SmartRing|Oura Ring/i => 智能戒指
 
-[健康设备]
-健康设备
-/血压|血糖|心电/i => 健康监测
-/Hearing aid|助听器/i => 智能助听
-/Sleep tracker|睡眠监测/i => 睡眠追踪
-
-[智能家居]
-智能家居
-/Smart Home/i => 智能家居
-智能音箱
-/Smart Speaker/i => 智能音箱
-扫地机器人
-/Robot Vacuum/i => 扫地机器人
-/智能门锁|智能灯具|智能插座/ => 智能家居
-/机器人冰箱|智能家电/ => 智能家电
+[智能手表AI]
+/Smartwatch.*AI|智能手表.*AI/ => AI智能手表
+/Watch.*AI助手|手表.*大模型/ => 手表AI
 
 [AI PC]
 /\bAI PC\b/ => AI PC
-/NPU|AI加速/ => AI加速
 /Copilot\+ PC|Copilot Plus/ => Copilot+ PC
-
-[芯片]
-芯片
-/Chip|Semiconductor/i => 芯片
-光刻机
-半导体
-/制程|3nm|5nm|7nm|先进封装/ => 先进制程
 
 [端侧 AI]
 端侧AI
 边缘AI
 /Edge AI|TinyML/i => 边缘AI
-/开发板|树莓派|Jetson/ => 开发板
-/dev board|Raspberry Pi/i => 开发板
+/开发板|树莓派|Raspberry Pi|Jetson/ => 开发板
 
-[众筹硬件]
-/Kickstarter|Indiegogo|Crowd Supply/ => 众筹硬件
-/众筹|预售|早鸟/ => 硬件众筹
-/crowdfunding|backer/i => 众筹
+[众筹AI硬件]
+/Kickstarter.*AI|Kickstarter.*hardware|Kickstarter.*robot/i => Kickstarter AI
+/Indiegogo.*AI|Indiegogo.*hardware/i => Indiegogo AI
+/Crowd Supply/i => Crowd Supply
 
-[自动驾驶]
-自动驾驶
-无人驾驶
-智驾
-/FSD|完全自动驾驶/ => FSD
-/Autopilot|self-driving/i => 自动驾驶
-
-[机器人]
-机器人
-/Robot/i => 机器人
-/机械臂|机械手/ => 机械臂
-/Robot arm|robotic arm/i => 机械臂
-
-# 产业政策
-生产力
-/融资|投资|种子轮|天使轮|A轮|B轮/ => 融资
-/funding|seed round|Series A/i => 融资
+[AI智能家居]
+/扫地机器人.*AI|AI扫地/ => AI扫地机器人
+/智能音箱.*AI|AI音箱/ => AI音箱
+/Robot Vacuum.*AI/ => AI扫地机器人
