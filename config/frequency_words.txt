@@ -3,7 +3,7 @@
 #                         Version: 1.1.0
 # ═══════════════════════════════════════════════════════════════
 
-# 可视化配置编辑器地址: https://sansan0.github.io/TrendRadar/
+# 可视化配置编辑器地址: `https://sansan0.github.io/TrendRadar/`
 #
 # 凡是左侧有 # 的都是仅供阅读的说明性文字
 #
@@ -15,7 +15,6 @@
 #   [WORD_GROUPS]    - 词组定义区：设置想关注的关键词
 #
 # ═══════════════════════════════════════════════════════════════
-
 
 # ───────────────────────────────────────────────────────────────
 #                        全局过滤区
@@ -30,8 +29,6 @@
 [GLOBAL_FILTER]
 # 过滤标题党
 震惊
-
-
 
 # ───────────────────────────────────────────────────────────────
 #                        词组定义区
@@ -150,52 +147,82 @@
 [WORD_GROUPS]
 
 # ═══════════════════════════════════════════════════════════════
-#                         企业与品牌
+#                         机器人公司
 # ═══════════════════════════════════════════════════════════════
 
-/胖东来|于东来/ => 胖东来
-
-/深度求索|幻方量化|梁文锋|\bDeepSeek\b/ => DeepSeek
-
-/华为|任正非|余承东|鸿蒙|海思|昇腾|鲲鹏|\bHUAWEI\b|\bHarmonyOS\b|\bHiSilicon\b/ => 华为
-
-/比亚迪|王传福|方程豹|腾势|仰望|弗迪|刀片电池|云辇|\bBYD\b|\bDenza\b|\bYangwang\b/ => 比亚迪
-
-/大疆|汪滔|灵眸|如影|\bDJI\b|\bRoboMaster\b|\bMavic\b|\bZenmuse\b/ => 大疆
-
 /宇树|王兴兴|\bUnitree\b/ => 宇树机器人
-
 /智元|灵犀|稚晖君|彭志辉|AgiBot/ => 智元机器人
 /众擎|EngineAI|赵同阳/ => 众擎机器人
+/特斯拉|马斯克|Optimus|擎天柱|\bTesla\b|\bElon Musk\b|\bCybertruck\b/ => 特斯拉
+/大疆|汪滔|灵眸|如影|\bDJI\b|\bRoboMaster\b|\bMavic\b|\bZenmuse\b/ => 大疆
+/优必选|Ubtech/ => 优必选
+/越疆|Dobot/ => 越疆
+/傅利叶|Fourier|GR-1/ => 傅利叶
+/星动纪元|Robot Era/ => 星动纪元
+/银河通用|Galbot/ => 银河通用
+/逐际动力|LimX/ => 逐际动力
+/Figure|\b01.AI\b/ => Figure AI
+/Boston Dynamics|波士顿动力/ => 波士顿动力
+/小米|CyberDog|铁大|铁二|雷军|\bXiaomi\b/ => 小米机器人
 
-/黑神话|冯骥/ => 黑神话悟空
+# ═══════════════════════════════════════════════════════════════
+#                         AI 硬件品牌
+# ═══════════════════════════════════════════════════════════════
 
-/影之刃零|梁其伟/ => 影之刃零
+/华为|任正非|余承东|鸿蒙|海思|昇腾|鲲鹏|\bHUAWEI\b|\bHarmonyOS\b|\bHiSilicon\b/ => 华为
+/苹果|库克|\biPhone\b|\biPad\b|\bMacBook\b|\biOS\b|\bVision Pro\b|\bAirPods\b|\bApple\b|\bTim Cook\b|\bApple Intelligence\b/ => 苹果
+/小米|雷军|红米|米家|米家智能家居|\bXiaomi\b|\bRedmi\b/ => 小米
+/Meta|扎克伯格|Quest|Ray-Ban|\bMeta\b|\bMark Zuckerberg\b/ => Meta
+/字节|PICO|抖音|\bByteDance\b|\bTikTok\b|\bPICO\b/ => 字节PICO
+/三星|Galaxy|\bSamsung\b/ => 三星
+/谷歌|Pixel|Google Glass|\bGoogle\b|\bPixel\b/ => 谷歌Pixel
+/OPPO|一加|AndesGPT|\bOPPO\b/ => OPPO
+/vivo|蓝心大模型|\bvivo\b/ => vivo
+/荣耀|\bHonor\b/ => 荣耀
+/联想|摩托罗拉|\bLenovo\b|\bMotorola\b/ => 联想
+/Insta360|影石|\bInsta360\b/ => 影石Insta360
+/Anker|安克|Eufy|Soundcore|\bAnker\b/ => 安克
+/雷鸟|雷鸟智能眼镜|TCL RayNeo/ => 雷鸟眼镜
+/Rokid|若琪/ => Rokid
+/XREAL|Nreal/ => XREAL
+/INMO|影目/ => 影目眼镜
+/小鹏|何小鹏|汇天|飞行汽车|\bXPeng\b/ => 小鹏
+/比亚迪|王传福|方程豹|腾势|仰望|\bBYD\b/ => 比亚迪
 
-/三体|流浪地球|刘慈欣|郭帆/ => 三体/流浪地球
+# ═══════════════════════════════════════════════════════════════
+#                         AI 硬件创业
+# ═══════════════════════════════════════════════════════════════
 
-申奥
+/Rabbit|\bR1\b|Rabbit R1/ => Rabbit R1
+/Humane|Ai Pin|AI Pin/ => Humane Ai Pin
+/Plaud|NotePin|\bPlaud\b/ => Plaud
+/Limitless|Tab AI|Rewind Pendant/ => Limitless Pendant
+/Friend|Friend AI 项链/ => Friend AI
+/Catlog|物流机器人/ => Catlog
+/Evri|创想佩斯/ => Evri
+/光粒科技|Lightinion/ => 光粒AR
+/李未可|MetaLens/ => 李未可
+/莫界|Moji/ => 莫界
+/奇点临近|Singularity/ => 奇点临近
+/星纪魅族|MYVU/ => 星纪魅族MYVU
+/跃动|Booster|机器人/ => 跃动机器人
 
-/京东|刘强东|\bJD\b|\bJingdong\b/ => 京东
+# ═══════════════════════════════════════════════════════════════
+#                         芯片公司
+# ═══════════════════════════════════════════════════════════════
 
-/字节|张一鸣|梁汝波|抖音|\bByteDance\b|\bTikTok\b|\bDouyin\b|\bLark\b|\bCapCut\b/ => 字节跳动
-
-/腾讯|鹅厂|马化腾|微信|QQ|天美|阅文集团|微众银行|\bTencent\b|\bPony Ma\b|\bWeChat\b|\bLightSpeed\b|\bWeBank\b/ => 腾讯
-
-/qwen|minimax|glm/ => 国产开源模型
-
-/特斯拉|马斯克|\bTesla\b|\bElon Musk\b|\bCybertruck\b|\bModel 3\b|\bModel Y\b|\bModel S\b|\bModel X\b|\bFSD\b/ => 特斯拉
-
-/英伟达|黄仁勋|\bNVIDIA\b|\bGeForce\b|\bRTX\b|\bCUDA\b|\bJensen Huang\b/ => 英伟达
+/英伟达|黄仁勋|\bNVIDIA\b|\bGeForce\b|\bRTX\b|\bCUDA\b|\bJetson\b|\bJensen Huang\b/ => 英伟达
 /苏姿丰|锐龙|霄龙|\bAMD\b|\bRyzen\b|\bEPYC\b|\bRadeon\b|\bLisa Su\b/ => AMD
-
-/微软|\bMicrosoft\b|\bWindows\b|\bAzure\b|\bSatya Nadella\b|\bCopilot\b/ => 微软
-/谷歌|皮查伊|安卓|油管|\bGoogle\b|\bAlphabet\b|\bAndroid\b|\bChrome\b|\bYouTube\b|\bGemini\b|\bDeepMind\b|\bWaymo\b/ => 谷歌
-/库克|\biPhone\b|\biPad\b|\bMacBook\b|\biOS\b|\bVision Pro\b|\bAirPods\b|\bApple\b|\bTim Cook\b/ => 苹果
-
-/\bOpenAI\b|\bChatGPT\b|\bSora\b|\bDALL-E\b|\bSam Altman\b|\bGreg Brockman\b/ => OpenAI
-/\bAnthropic\b|\bClaude\b|\bDario Amodei\b/ => Claude
-
+/高通|骁龙|\bQualcomm\b|\bSnapdragon\b/ => 高通
+/联发科|天玑|\bMediaTek\b|\bDimensity\b/ => 联发科
+/Intel|英特尔|酷睿|Core Ultra|Meteor Lake/ => 英特尔
+/Arm|安谋|\bArm\b/ => Arm
+/地平线|征程|Horizon Robotics/ => 地平线
+/黑芝麻|Black Sesame/ => 黑芝麻
+/寒武纪|Cambricon/ => 寒武纪
+/瑞芯微|Rockchip/ => 瑞芯微
+/晶晨|Amlogic/ => 晶晨
+/全志|Allwinner/ => 全志
 
 # ═══════════════════════════════════════════════════════════════
 #                         国家与地区
@@ -204,55 +231,102 @@
 [中国]
 国产
 中国
+国内
 
 [东亚]
 日本
-朝鲜
 韩国
 
 [北美]
 美国
-加拿大
-
-[西欧]
-法国
-英国
+硅谷
 
 /俄罗斯|俄国/ => 俄罗斯
-
-印度
-
+/深圳|华强北/ => 深圳硬件
 
 # ═══════════════════════════════════════════════════════════════
-#                         科技领域
+#                         AI 硬件品类
 # ═══════════════════════════════════════════════════════════════
 
-[AI 相关]
+[AI 硬件]
+AI硬件
+智能硬件
 /(?<![a-zA-Z])ai(?![a-zA-Z])/
 人工智能
+
+[AI 眼镜]
+AI眼镜
+智能眼镜
+AR眼镜
+/Ray-Ban|Ray Ban|Meta智能眼镜/ => Ray-Ban Meta
+/MYVU|AR界/ => 智能眼镜
+
+[AI 陪伴]
+AI陪伴
+AI玩具
+/AI 项链|AI Pin|智能胸针|智能项链/ => AI 可穿戴陪伴
+/机器人宠物|AI宠物/ => AI 宠物
+
+[人形机器人]
+人形机器人
+/Optimus|擎天柱/ => 人形机器人
+/双足|直立行走/ => 双足机器人
+
+[机器狗]
+机器狗
+/机械狗|四足/ => 机器狗
+/CyberDog|机械狗/ => 机器狗
+
+[无人机]
+无人机
+/穿越机|FPV/ => 穿越机
+
+[AR/VR]
+/\bAR\b|\bVR\b|\bMR\b|\bXR\b/ => AR/VR
+/Vision Pro|混合现实|空间计算/ => 空间计算
+/Quest|PICO|VR头显/ => VR头显
+
+[可穿戴]
+可穿戴
+智能手表
+智能戒指
+智能手环
+/Oura Ring|智能戒指/ => 智能戒指
+/智能项链|智能徽章/ => 智能配件
+
+[智能家居]
+智能家居
+智能音箱
+扫地机器人
+/智能门锁|智能灯具|智能插座/ => 智能家居
+/机器人冰箱|智能家电/ => 智能家电
+
+[AI PC]
+/\bAI PC\b/ => AI PC
+/NPU|AI加速/ => AI加速
+/Copilot\+ PC|Copilot Plus/ => Copilot+ PC
 
 [芯片]
 芯片
 光刻机
 半导体
+/制程|3nm|5nm|7nm|先进封装/ => 先进制程
 
-/水电|雅鲁藏布江/ => 水电
-/光伏|太阳能/ => 光伏
-核能
-能源
+[端侧 AI]
+端侧AI
+边缘AI
+/Edge AI|TinyML/ => 边缘AI
+/开发板|树莓派|Jetson/ => 开发板
 
-/自动驾驶|无人驾驶|智驾/ => 自动驾驶
+[众筹硬件]
+/Kickstarter|Indiegogo|Crowd Supply/ => 众筹硬件
+/众筹|预售|早鸟/ => 硬件众筹
 
-机器人
-/机械狗|四足/ => 机器狗
-具身智能
-
-/月球|登月|火星|宇宙|飞船|航天|空间站|卫星/ => 航天
-
-# 前沿科技
-量子
-脑机
-基因
+[自动驾驶]
+自动驾驶
+无人驾驶
+智驾
+/FSD|完全自动驾驶/ => FSD
 
 # 产业政策
 生产力
