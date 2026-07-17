@@ -3,7 +3,7 @@
 #                         Version: 1.1.0
 # ═══════════════════════════════════════════════════════════════
 
-# 可视化配置编辑器地址: `https://sansan0.github.io/TrendRadar/`
+# 可视化配置编辑器地址: ``https://sansan0.github.io/TrendRadar/``
 #
 # 凡是左侧有 # 的都是仅供阅读的说明性文字
 #
@@ -29,6 +29,14 @@
 [GLOBAL_FILTER]
 # 过滤标题党
 震惊
+震惊体
+标题党
+/10万+|100000\+/
+/速看|急转发|不看后悔/
+
+# 过滤无关内容
+/彩票|赌博|博彩|棋牌/
+/股票推荐|炒股秘籍|牛股/
 
 # ───────────────────────────────────────────────────────────────
 #                        词组定义区
@@ -161,9 +169,13 @@
 /星动纪元|Robot Era/ => 星动纪元
 /银河通用|Galbot/ => 银河通用
 /逐际动力|LimX/ => 逐际动力
-/Figure|\b01.AI\b/ => Figure AI
+/Figure|\b01\.AI\b/ => Figure AI
 /Boston Dynamics|波士顿动力/ => 波士顿动力
 /小米|CyberDog|铁大|铁二|雷军|\bXiaomi\b/ => 小米机器人
+/ sanctuary|Sanctuary AI|Phoenix/ => Sanctuary AI
+/1X|EVE|NEO/ => 1X机器人
+/Apptronik|Apollo/ => Apptronik
+ agility|Agility Robotics|Digit/ => Agility Robotics
 
 # ═══════════════════════════════════════════════════════════════
 #                         AI 硬件品牌
@@ -188,6 +200,9 @@
 /INMO|影目/ => 影目眼镜
 /小鹏|何小鹏|汇天|飞行汽车|\bXPeng\b/ => 小鹏
 /比亚迪|王传福|方程豹|腾势|仰望|\bBYD\b/ => 比亚迪
+/Nothing|Phone $1$|CMF/ => Nothing
+/荣耀|MagicV|Magic V/ => 荣耀折叠屏
+/BOE|京东方/ => 京东方
 
 # ═══════════════════════════════════════════════════════════════
 #                         AI 硬件创业
@@ -206,6 +221,11 @@
 /奇点临近|Singularity/ => 奇点临近
 /星纪魅族|MYVU/ => 星纪魅族MYVU
 /跃动|Booster|机器人/ => 跃动机器人
+/Brilliant Labs|Frame|Monocle/ => Brilliant Labs
+/Even Realities|G1/ => Even G1
+/Solos|AirGo/ => Solos
+/Project Astra|Google AI眼镜/ => Google AI眼镜
+/MindLink|AI眼镜/ => MindLink
 
 # ═══════════════════════════════════════════════════════════════
 #                         芯片公司
@@ -232,17 +252,54 @@
 国产
 中国
 国内
+华人
 
 [东亚]
 日本
 韩国
+东京
+首尔
 
 [北美]
 美国
 硅谷
+旧金山
+得州
 
 /俄罗斯|俄国/ => 俄罗斯
 /深圳|华强北/ => 深圳硬件
+/杭州|阿里|余杭/ => 杭州
+/上海|张江/ => 上海
+/北京|海淀|中关村/ => 北京
+
+# ═══════════════════════════════════════════════════════════════
+#                         展会与活动
+# ═══════════════════════════════════════════════════════════════
+
+[CES]
+CES
+Consumer Electronics Show
+
+[MWC]
+MWC
+Mobile World Congress
+
+[IFA]
+IFA
+柏林消费电子展
+
+[COMPUTEX]
+COMPUTEX
+台北国际电脑展
+
+[世界人工智能大会]
+WAIC
+世界人工智能大会
+人工智能大会
+
+[AWE]
+AWE
+中国家电及消费电子博览会
 
 # ═══════════════════════════════════════════════════════════════
 #                         AI 硬件品类
@@ -251,7 +308,7 @@
 [AI 硬件]
 AI硬件
 智能硬件
-/(?<![a-zA-Z])ai(?![a-zA-Z])/
+/(?<![a-zA-Z])ai(?![a-zA-Z])/i
 人工智能
 
 [AI 眼镜]
@@ -260,44 +317,63 @@ AI眼镜
 AR眼镜
 /Ray-Ban|Ray Ban|Meta智能眼镜/ => Ray-Ban Meta
 /MYVU|AR界/ => 智能眼镜
+/Smart Glasses|smartglasses/i => 智能眼镜
 
 [AI 陪伴]
 AI陪伴
 AI玩具
 /AI 项链|AI Pin|智能胸针|智能项链/ => AI 可穿戴陪伴
 /机器人宠物|AI宠物/ => AI 宠物
+/Companion robot|companion AI/i => 陪伴机器人
 
 [人形机器人]
 人形机器人
+/Humanoid/i => 人形机器人
 /Optimus|擎天柱/ => 人形机器人
 /双足|直立行走/ => 双足机器人
+/具身智能|Embodied AI|Embodied Intelligence/i => 具身智能
 
 [机器狗]
 机器狗
 /机械狗|四足/ => 机器狗
 /CyberDog|机械狗/ => 机器狗
+/Quadruped|robot dog/i => 四足机器人
 
 [无人机]
 无人机
 /穿越机|FPV/ => 穿越机
+/Drone/i => 无人机
 
 [AR/VR]
 /\bAR\b|\bVR\b|\bMR\b|\bXR\b/ => AR/VR
 /Vision Pro|混合现实|空间计算/ => 空间计算
 /Quest|PICO|VR头显/ => VR头显
+/Mixed Reality|Spatial Computing/i => 空间计算
 
 [可穿戴]
 可穿戴
+/Wearable/i => 可穿戴
 智能手表
+/Smartwatch/i => 智能手表
 智能戒指
+/Smart Ring|SmartRing/i => 智能戒指
 智能手环
-/Oura Ring|智能戒指/ => 智能戒指
 /智能项链|智能徽章/ => 智能配件
+/fitness tracker|健康手环/i => 健康追踪
+
+[健康设备]
+健康设备
+/血压|血糖|心电/i => 健康监测
+/Hearing aid|助听器/i => 智能助听
+/Sleep tracker|睡眠监测/i => 睡眠追踪
 
 [智能家居]
 智能家居
+/Smart Home/i => 智能家居
 智能音箱
+/Smart Speaker/i => 智能音箱
 扫地机器人
+/Robot Vacuum/i => 扫地机器人
 /智能门锁|智能灯具|智能插座/ => 智能家居
 /机器人冰箱|智能家电/ => 智能家电
 
@@ -308,6 +384,7 @@ AI玩具
 
 [芯片]
 芯片
+/Chip|Semiconductor/i => 芯片
 光刻机
 半导体
 /制程|3nm|5nm|7nm|先进封装/ => 先进制程
@@ -315,18 +392,29 @@ AI玩具
 [端侧 AI]
 端侧AI
 边缘AI
-/Edge AI|TinyML/ => 边缘AI
+/Edge AI|TinyML/i => 边缘AI
 /开发板|树莓派|Jetson/ => 开发板
+/dev board|Raspberry Pi/i => 开发板
 
 [众筹硬件]
 /Kickstarter|Indiegogo|Crowd Supply/ => 众筹硬件
 /众筹|预售|早鸟/ => 硬件众筹
+/crowdfunding|backer/i => 众筹
 
 [自动驾驶]
 自动驾驶
 无人驾驶
 智驾
 /FSD|完全自动驾驶/ => FSD
+/Autopilot|self-driving/i => 自动驾驶
+
+[机器人]
+机器人
+/Robot/i => 机器人
+/机械臂|机械手/ => 机械臂
+/Robot arm|robotic arm/i => 机械臂
 
 # 产业政策
 生产力
+/融资|投资|种子轮|天使轮|A轮|B轮/ => 融资
+/funding|seed round|Series A/i => 融资
