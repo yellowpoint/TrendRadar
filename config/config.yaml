@@ -3,9 +3,7 @@
 #                      Version: 2.4.0
 # ═══════════════════════════════════════════════════════════════
 
-
 # 可视化配置编辑器地址: https://sansan0.github.io/TrendRadar/
-
 
 # ===============================================================
 # 1. 基础设置
@@ -16,10 +14,9 @@ app:
   #   - Asia/Shanghai (北京时间 UTC+8)
   #   - America/New_York (美东时间 UTC-5/-4)
   #   - Europe/London (伦敦时间 UTC+0/+1)
-  # 完整时区列表: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  # 完整时区列表: `https://en.wikipedia.org/wiki/List_of_tz_database_time_zones`
   timezone: "Asia/Shanghai"
   show_version_update: true           # 是否显示版本更新提示（true=显示, false=隐藏）
-
 
 # ===============================================================
 # 1.5 调度系统 —— 什么时间做什么事
@@ -43,11 +40,10 @@ schedule:
   enabled: false                        # 是否启用调度系统（true=启用, false=关闭，默认关闭）
   preset: "morning_evening"             # 预设模板名称（见上方说明）
 
-
 # ===============================================================
 # 2. 数据源 - 热榜平台
 #
-# 数据来源于 newsnow 开源项目: https://github.com/ourongxing/newsnow
+# 数据来源于 newsnow 开源项目: `https://github.com/ourongxing/newsnow`
 # 你可以自行部署 newsnow 并将 api_url 指向你自己的实例
 #
 # enabled: 是否启用热榜抓取（总开关）
@@ -64,43 +60,35 @@ schedule:
 platforms:
   enabled: true                         # 是否启用热榜平台抓取（true=启用, false=关闭）
   api_url: ""                            # 热榜数据 API 地址（留空使用默认地址）
-                                        # 如果你自行部署了 newsnow，填入你的地址，如: https://your-domain.com/api/s
+                                        # 如果你自行部署了 newsnow，填入你的地址，如: `https://your-domain.com/api/s`
   sources:
-    - id: "toutiao"
-      name: "今日头条"
-      expected_domain: "toutiao.com"
-    - id: "baidu"
-      name: "百度热搜"
-      expected_domain: "baidu.com"
-    - id: "wallstreetcn-hot"
-      name: "华尔街见闻"
-      expected_domain: "wallstreetcn.com"
-    - id: "thepaper"
-      name: "澎湃新闻"
-      expected_domain: "thepaper.cn"
-    - id: "bilibili-hot-search"
-      name: "bilibili 热搜"
-      expected_domain: "bilibili.com"
-    - id: "cls-hot"
-      name: "财联社热门"
-      expected_domain: "cls.cn"
-    - id: "ifeng"
-      name: "凤凰网"
-      expected_domain: "ifeng.com"
-    - id: "tieba"
-      name: "贴吧"
-      expected_domain: "baidu.com"
-    - id: "weibo"
-      name: "微博"
-      expected_domain: "weibo.com"
-    - id: "douyin"
-      name: "抖音"
-      expected_domain: "douyin.com"
+    # === 科技媒体/社区（核心）===
+    - id: "ithome"
+      name: "IT之家"
+      expected_domain: "ithome.com"
+    - id: "sspai"
+      name: "少数派"
+      expected_domain: "sspai.com"
+    - id: "solidot"
+      name: "Solidot"
+      expected_domain: "solidot.org"
+    - id: "hackernews"
+      name: "Hacker News"
+      expected_domain: "news.ycombinator.com"
+    - id: "producthunt"
+      name: "ProductHunt"
+      expected_domain: "producthunt.com"
+
+    # === 综合热榜（捕捉 AI 硬件出圈话题）===
     - id: "zhihu"
       name: "知乎"
       expected_domain: "zhihu.com"
-
-
+    - id: "weibo"
+      name: "微博"
+      expected_domain: "weibo.com"
+    - id: "bilibili-hot-search"
+      name: "bilibili 热搜"
+      expected_domain: "bilibili.com"
 
 # ===============================================================
 # 3. 数据源 - RSS 订阅
@@ -127,27 +115,102 @@ rss:
   # - 正整数：覆盖全局设置，只推送此天数内的文章
   # - 0：禁用此频道的新鲜度过滤，推送所有文章
   feeds:
-    - id: "hacker-news"
-      name: "Hacker News"
-      url: "https://hnrss.org/frontpage"
+    # === 国内科技媒体 ===
+    - id: "zhidx"
+      name: "智东西"
+      url: "https://www.zhidx.com/rss"
 
-    - id: "ruanyifeng"
-      name: "阮一峰的网络日志"
-      url: "http://www.ruanyifeng.com/blog/atom.xml"
-      enabled: false                  # 禁用
-      # max_age_days: 3               # 示例：推送 3 天内的文章（更新较慢的博客）
-     
-    - id: "yahoo-finance"
-      name: "雅虎财经"
-      url: "https://finance.yahoo.com/news/rssindex"
+    - id: "geekpark"
+      name: "极客公园"
+      url: "https://www.geekpark.net/rss"
 
-    # 自定义源示例
-    # - id: "custom-feed"
-    #   name: "自定义源"
-    #   url: "https://example.com/feed.xml"
-    #   enabled: false
-    #   max_age_days: 0               # 示例：禁用过滤，推送所有文章
+    - id: "ifanr"
+      name: "爱范儿"
+      url: "https://www.ifanr.com/feed"
 
+    - id: "qbitai"
+      name: "量子位"
+      url: "https://www.qbitai.com/feed"
+
+    - id: "jiqizhixin"
+      name: "机器之心"
+      url: "https://www.jiqizhixin.com/rss"
+
+    - id: "36kr"
+      name: "36氪"
+      url: "https://36kr.com/feed"
+
+    - id: "pingwest"
+      name: "品玩"
+      url: "https://rsshub.app/pingwest/status"   # 原生已失效，走 RSSHub 公共实例（建议自建）
+
+    - id: "leikeji"
+      name: "雷科技"
+      url: "http://www.leikeji.com/rss"
+
+    - id: "dgtle"
+      name: "数字尾巴"
+      url: "https://www.dgtle.com/rss/dgtle.xml"
+
+    # === 海外科技媒体（第一梯队）===
+    - id: "theverge"
+      name: "The Verge"
+      url: "https://www.theverge.com/rss/index.xml"
+
+    - id: "engadget"
+      name: "Engadget"
+      url: "https://www.engadget.com/rss.xml"
+
+    - id: "newatlas"
+      name: "New Atlas"
+      url: "https://newatlas.com/technology/index.rss"   # 科技分类 feed，画面直观的新品首选
+
+    - id: "wareable"
+      name: "Wareable（占位，无 RSS）"
+      url: "https://www.wareable.com/feed"                # ⚠️ Wareable 无可用 RSS，此条会抓取失败
+      enabled: false                                     # 已禁用；保留占位提醒人工浏览 https://www.wareable.com/category/wearable-tech
+
+    - id: "techcrunch"
+      name: "TechCrunch"
+      url: "https://techcrunch.com/feed/"
+
+    - id: "ieee-spectrum"
+      name: "IEEE Spectrum"
+      url: "https://spectrum.ieee.org/feeds/feed.rss"     # 仅全站 feed，无机器人专属；可用关键词过滤 robotics/机器人
+
+    # === 海外科技媒体（第二梯队）===
+    - id: "techradar"
+      name: "TechRadar"
+      url: "https://www.techradar.com/rss"
+
+    - id: "tomsguide"
+      name: "Tom's Guide"
+      url: "https://www.tomsguide.com/rss"                # 仅全站 feed，无 AI 专属；可用关键词过滤 AI
+
+    - id: "yankodesign"
+      name: "Yanko Design"
+      url: "https://www.yankodesign.com/feed/"
+
+    - id: "designboom"
+      name: "Designboom"
+      url: "https://www.designboom.com/feed/"
+
+    - id: "notebookcheck"
+      name: "Notebookcheck"
+      url: "https://www.notebookcheck.net/RSS-News.48.0.html"
+
+    - id: "gadgetflow"
+      name: "Gadget Flow"
+      url: "https://thegadgetflow.com/feed/"
+
+    - id: "hackaday"
+      name: "Hackaday"
+      url: "https://hackaday.com/blog/feed/"
+
+    # === 众筹 / 产品发现 ===
+    - id: "kickstarter-tech"
+      name: "Kickstarter Technology"
+      url: "https://www.kickstarter.com/discover/advanced?format=atom&category_id=16"
 
 # ===============================================================
 # 4. 报告模式
@@ -170,7 +233,6 @@ report:
 
   max_news_per_keyword: 0             # 每个关键词/标签最大显示数量（0=不限制，仅影响展示裁剪）
 
-
 # ===============================================================
 # 4.5 筛选策略
 # ===============================================================
@@ -184,7 +246,6 @@ filter:
   priority_sort_enabled: true          # AI 模式标签排序（仅 method=ai 时生效）
                                        # true = 按兴趣描述中的定义顺序
                                        # false = 按匹配条数排序（多的在前）
-
 
 # ===============================================================
 # 4.6 AI 智能筛选配置（仅 filter.method=ai 时生效）
@@ -214,7 +275,6 @@ ai_filter:
 
   # 标签更新提示词模板（兴趣变更时 AI 对比新旧标签）
   update_tags_prompt_file: "update_tags_prompt.txt"
-
 
 # ===============================================================
 # 5. 推送内容控制
@@ -248,7 +308,6 @@ display:
     platforms: ["zhihu", "wallstreetcn-hot"]     # 热榜平台 ID 列表（如 ["zhihu", "weibo"]）
     rss_feeds: []                                # RSS 源 ID 列表（如 ["hacker-news"]）
     max_items: 20                                # 每个源最多展示条数（0=不限制）
-
 
 # ===============================================================
 # 6. 推送通知
@@ -287,12 +346,12 @@ notification:
       smtp_port: ""                   # SMTP 端口（可选，留空自动识别）
 
     ntfy:
-      server_url: "https://ntfy.sh"   # ntfy 服务器地址（可改为自托管）
+      server_url: "`https://ntfy.sh`"   # ntfy 服务器地址（可改为自托管）
       topic: ""                       # ntfy 主题名称
       token: ""                       # ntfy 访问令牌（可选，用于私有主题）
 
     bark:
-      url: ""                         # Bark 推送 URL（格式：https://api.day.app/your_device_key）
+      url: ""                         # Bark 推送 URL（格式：`https://api.day.app/your_device_key` ）
 
     slack:
       webhook_url: ""                 # Slack Incoming Webhook URL
@@ -302,7 +361,6 @@ notification:
       payload_template: ""            # JSON 模板，支持 {title} 和 {content} 占位符
                                       # 示例：{"content": "{content}"}
                                       # 留空则使用默认格式：{"title": "{title}", "content": "{content}"}
-
 
 # ===============================================================
 # 7. 存储配置
@@ -335,8 +393,8 @@ storage:
     # S3 兼容配置（或使用环境变量 S3_ENDPOINT_URL 等）
     endpoint_url: ""                  # 服务端点
                                       # Cloudflare R2: https://<account_id>.r2.cloudflarestorage.com
-                                      # 阿里云 OSS: https://oss-cn-hangzhou.aliyuncs.com
-                                      # 腾讯云 COS: https://cos.ap-guangzhou.myqcloud.com
+                                      # 阿里云 OSS: `https://oss-cn-hangzhou.aliyuncs.com`
+                                      # 腾讯云 COS: `https://cos.ap-guangzhou.myqcloud.com`
     bucket_name: ""                   # 存储桶名称
     access_key_id: ""                 # 访问密钥 ID
     secret_access_key: ""             # 访问密钥
@@ -346,7 +404,6 @@ storage:
   pull:
     enabled: false                    # 是否启用启动时自动拉取（true=启用, false=关闭）
     days: 7                           # 拉取最近 N 天的数据
-
 
 # ===============================================================
 # 8. AI 模型配置（ai_analysis / ai_translation / ai_filter 共用）
@@ -360,7 +417,7 @@ ai:
   #   - gemini/gemini-2.5-flash (Google Gemini)
   #   - anthropic/claude-sonnet-4-20250514 (Anthropic)
   #   - ollama/llama3 (本地 Ollama)
-  # 完整列表: https://docs.litellm.ai/docs/providers
+  # 完整列表: `https://docs.litellm.ai/docs/providers`
   # 如果你对于看英文文档比较头疼，那么可以点击页面右下角的 【Ask AI】 ,用中文询问怎么配置
 
   model: "deepseek/deepseek-v4-flash"
@@ -377,7 +434,7 @@ ai:
                                     #
                                     # 🔧 怎么填？两步走：
                                     #    第一步 - api_base 填写服务商给你的接口地址
-                                    #      例如: https://your-provider.com/v1
+                                    #      例如: `https://your-provider.com/v1`
                                     #
                                     #    第二步 - model 前面加上 "openai/" 前缀
                                     #      例如: openai/deepseek-ai/DeepSeek-V3
@@ -386,7 +443,6 @@ ai:
                                     #    大部分 AI 服务商都兼容同一套通用接口格式，
                                     #    加上 openai/ 就是告诉系统"用这套通用格式去连接"，
                                     #    这样几乎任何服务商都能接入。
-
 
   timeout: 120                      # 请求超时（秒）
 
@@ -405,7 +461,6 @@ ai:
   #   top_p: 1.0
   #   presence_penalty: 0.0
   #   stop: ["END"]
-
 
 # ===============================================================
 # 9. AI 分析功能（模型配置见上方 ai 段）
@@ -431,9 +486,6 @@ ai_analysis:
                                     # true = 完整轨迹（如 1(09:30)→2(10:00)），AI 分析更准但多耗 0.5~1 倍 token
                                     # false = 简化格式（排名范围+出现次数），更省 token
 
-
-
-
 # ===============================================================
 # 10. AI 翻译功能（模型配置见上方 ai 段）
 #
@@ -453,7 +505,6 @@ ai_translation:
     rss: true                       # 翻译 RSS 标题（true=翻译, false=不翻译）
     standalone: true                # 翻译独立展示区标题（true=翻译, false=不翻译）
 
-
 # ===============================================================
 # 11. 高级设置（一般无需修改）
 # ===============================================================
@@ -461,9 +512,9 @@ advanced:
   debug: false                        # 调试模式（true=开启详细日志, false=正常模式）
 
   # 版本检查
-  version_check_url: "https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version"
-  mcp_version_check_url: "https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version_mcp"
-  configs_version_check_url: "https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version_configs"
+  version_check_url: "`https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version`"
+  mcp_version_check_url: "`https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version_mcp`"
+  configs_version_check_url: "`https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version_configs`"
 
   # 热榜爬虫技术参数
   crawler:
