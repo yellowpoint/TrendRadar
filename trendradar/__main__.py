@@ -12,6 +12,16 @@ import webbrowser
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# 加载项目根目录的 .env 文件（仅设置未存在的环境变量，不影响 GitHub Secrets 等已注入的值）
+# 方便本地测试 Turso / S3 / 通知等配置，文件已被 .gitignore 忽略
+try:
+    from dotenv import load_dotenv
+    _env_path = Path(__file__).resolve().parent.parent / ".env"
+    if _env_path.exists():
+        load_dotenv(_env_path, override=False)
+except ImportError:
+    pass
+
 from trendradar.context import AppContext
 from trendradar import __version__
 from trendradar.core import load_config
