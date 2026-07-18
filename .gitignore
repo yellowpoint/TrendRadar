@@ -68,3 +68,15 @@ capacitor.config.json
 
 /prisma/data
 /prisma/*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# 运行时生成的输出（爬虫数据、HTML 报告、索引）
+# 代码模板在根目录 index.html，output/ 下的是运行产物
+/output/
