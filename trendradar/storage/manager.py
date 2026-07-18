@@ -242,6 +242,34 @@ class StorageManager:
                 print(f"[存储管理器] Turso 同步 RSS 数据异常: {e}")
         return ok
 
+    def flush_turso_matched(
+        self,
+        matched_news_urls: Optional[set] = None,
+        matched_news_titles: Optional[set] = None,
+        matched_rss_urls: Optional[set] = None,
+    ) -> None:
+        """
+        在 matched_only 模式下，把暂存中命中的数据同步到 Turso。
+
+        应在分析流水线完成后（拿到 stats / rss_items）调用，从 stats 提取命中的 url/title
+        集合传入。非 matched_only 模式下此方法为空操作。
+
+        Args:
+            matched_news_urls: 命中的新闻 URL 集合
+            matched_news_titles: 命中的新闻标题集合（url 为空时兜底）
+            matched_rss_urls: 命中的 RSS URL 集合
+        """
+        if not self._turso_service or not self._turso_service.enabled:
+            return
+        try:
+            self._turso_service.flush_matched(
+                matched_news_urls=matched_news_urls,
+                matched_news_titles=matched_news_titles,
+                matched_rss_urls=matched_rss_urls,
+            )
+        except Exception as e:
+            print(f"[存储管理器] Turso flush_matched 异常: {e}")
+
     def get_rss_data(self, date: Optional[str] = None) -> Optional[RSSData]:
         """获取指定日期的所有 RSS 数据（当日汇总模式）"""
         return self.get_backend().get_rss_data(date)

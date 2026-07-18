@@ -146,6 +146,7 @@ class TursoSyncService:
         auth_token: str,
         sync_news: bool = True,
         sync_rss: bool = True,
+        sync_mode: str = "all",
     ):
         """
         初始化 Turso 同步服务
@@ -155,14 +156,22 @@ class TursoSyncService:
             auth_token: Turso auth token
             sync_news: 是否同步热榜数据
             sync_rss: 是否同步 RSS 数据
+            sync_mode: 同步策略
+                - "all": 同步全部抓取到的数据（默认）
+                - "matched_only": 采集阶段暂存，等分析完成后只同步命中的数据
+                  需配合 flush_matched() 方法使用
         """
         self.url = self._normalize_url(url)
         self.auth_token = auth_token
         self.sync_news_enabled = sync_news
         self.sync_rss_enabled = sync_rss
+        self.sync_mode = sync_mode if sync_mode in ("all", "matched_only") else "all"
         self._session: Optional[requests.Session] = None
         self._enabled = True
         self._initialized = False
+        # matched_only 模式下的暂存区
+        self._pending_news: List[NewsData] = []
+        self._pending_rss: List[RSSData] = []
 
         if not url or not auth_token:
             print("[Turso 同步] 未配置 url 或 auth_token，同步功能禁用")
@@ -277,6 +286,11 @@ class TursoSyncService:
         if not data or not data.items:
             return True
 
+        # matched_only 模式：暂存到 pending，等分析完成后 flush
+        if self.sync_mode == "matched_only":
+            self._pending_news.append(data)
+            return True
+
         crawl_date = data.date
         crawl_time = data.crawl_time
 
@@ -363,6 +377,11 @@ class TursoSyncService:
         if not data or not data.items:
             return True
 
+        # matched_only 模式：暂存到 pending，等分析完成后 flush
+        if self.sync_mode == "matched_only":
+            self._pending_rss.append(data)
+            return True
+
         crawl_date = data.date
         crawl_time = data.crawl_time
 
@@ -420,6 +439,102 @@ class TursoSyncService:
             print(f"[Turso 同步] 同步 RSS 数据失败: {e}")
             return False
 
+    def flush_matched(
+        self,
+        matched_news_urls: Optional[set] = None,
+        matched_news_titles: Optional[set] = None,
+        matched_rss_urls: Optional[set] = None,
+    ) -> None:
+        """
+        在 matched_only 模式下，把暂存中命中的数据同步到 Turso，然后清空暂存。
+
+        匹配规则（命中任一即视为命中）：
+        - 新闻：item.url 在 matched_news_urls 中（url 为空时，item.title 在 matched_news_titles 中）
+        - RSS：item.url 在 matched_rss_urls 中
+
+        如果传入空集合或 None，则不同步任何数据（清空暂存）。
+
+        Args:
+            matched_news_urls: 命中的新闻 URL 集合
+            matched_news_titles: 命中的新闻标题集合（用于 url 为空时的兜底匹配）
+            matched_rss_urls: 命中的 RSS URL 集合
+        """
+        if not self._enabled:
+            return
+        if self.sync_mode != "matched_only":
+            return  # 非 matched_only 模式不处理
+
+        matched_news_urls = matched_news_urls or set()
+        matched_news_titles = matched_news_titles or set()
+        matched_rss_urls = matched_rss_urls or set()
+
+        # 筛选命中的新闻数据，重建 NewsData
+        from trendradar.storage.base import NewsData, RSSData
+
+        matched_news_count = 0
+        for pending_data in self._pending_news:
+            matched_items = {}  # source_id -> List[NewsItem]
+            for source_id, items in pending_data.items.items():
+                hit_items = [
+                    item for item in items
+                    if (item.url and item.url in matched_news_urls)
+                    or (not item.url and item.title in matched_news_titles)
+                ]
+                if hit_items:
+                    matched_items[source_id] = hit_items
+                    matched_news_count += len(hit_items)
+
+            if matched_items:
+                # 临时切换 sync_mode 避免 sync_news_data 再次暂存
+                matched_data = NewsData(
+                    items=matched_items,
+                    id_to_name=pending_data.id_to_name,
+                    date=pending_data.date,
+                    crawl_time=pending_data.crawl_time,
+                )
+                old_mode = self.sync_mode
+                self.sync_mode = "all"
+                try:
+                    self.sync_news_data(matched_data)
+                finally:
+                    self.sync_mode = old_mode
+
+        # 筛选命中的 RSS 数据
+        matched_rss_count = 0
+        for pending_data in self._pending_rss:
+            matched_items = {}  # feed_id -> List[RSSItem]
+            for feed_id, items in pending_data.items.items():
+                hit_items = [
+                    item for item in items
+                    if item.url and item.url in matched_rss_urls
+                ]
+                if hit_items:
+                    matched_items[feed_id] = hit_items
+                    matched_rss_count += len(hit_items)
+
+            if matched_items:
+                matched_data = RSSData(
+                    items=matched_items,
+                    id_to_name=pending_data.id_to_name,
+                    date=pending_data.date,
+                    crawl_time=pending_data.crawl_time,
+                )
+                old_mode = self.sync_mode
+                self.sync_mode = "all"
+                try:
+                    self.sync_rss_data(matched_data)
+                finally:
+                    self.sync_mode = old_mode
+
+        print(
+            f"[Turso 同步] matched_only 模式 flush 完成: "
+            f"命中新闻 {matched_news_count} 条, RSS {matched_rss_count} 条"
+        )
+
+        # 清空暂存
+        self._pending_news.clear()
+        self._pending_rss.clear()
+
     def cleanup(self) -> None:
         """清理资源"""
         if self._session:
@@ -475,4 +590,5 @@ def create_turso_service_from_config(
         auth_token=auth_token,
         sync_news=turso_config.get("sync_news", True),
         sync_rss=turso_config.get("sync_rss", True),
+        sync_mode=turso_config.get("sync_mode", "all"),
     )

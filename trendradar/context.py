@@ -212,6 +212,7 @@ class AppContext:
                     "auth_token": turso_config.get("AUTH_TOKEN", ""),
                     "sync_news": turso_config.get("SYNC_NEWS", True),
                     "sync_rss": turso_config.get("SYNC_RSS", True),
+                    "sync_mode": turso_config.get("SYNC_MODE", "all"),
                 },
             )
         return self._storage_manager

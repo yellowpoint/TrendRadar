@@ -797,6 +797,49 @@ class NewsAnalyzer:
                 translate_report_func=translate_report_func,
             )
 
+        # matched_only 模式：从 stats / rss_items 提取命中的 url/title，flush 到 Turso
+        # 非 matched_only 模式下此调用为空操作
+        try:
+            matched_news_urls: set = set()
+            matched_news_titles: set = set()
+            for stat in (stats or []):
+                titles = stat.get("titles", [])
+                # stats 的 titles 可能是 list（扁平）或 dict（按 source_id 分组）
+                if isinstance(titles, list):
+                    for td in titles:
+                        if td.get("url"):
+                            matched_news_urls.add(td["url"])
+                        elif td.get("title"):
+                            matched_news_titles.add(td["title"])
+                elif isinstance(titles, dict):
+                    for _source_id, td_list in titles.items():
+                        for td in td_list:
+                            if td.get("url"):
+                                matched_news_urls.add(td["url"])
+                            elif td.get("title"):
+                                matched_news_titles.add(td["title"])
+
+            matched_rss_urls: set = set()
+            for stat in (rss_items or []):
+                titles = stat.get("titles", [])
+                if isinstance(titles, list):
+                    for td in titles:
+                        if td.get("url"):
+                            matched_rss_urls.add(td["url"])
+                elif isinstance(titles, dict):
+                    for _feed_id, td_list in titles.items():
+                        for td in td_list:
+                            if td.get("url"):
+                                matched_rss_urls.add(td["url"])
+
+            self.storage_manager.flush_turso_matched(
+                matched_news_urls=matched_news_urls,
+                matched_news_titles=matched_news_titles,
+                matched_rss_urls=matched_rss_urls,
+            )
+        except Exception as e:
+            print(f"[Turso 同步] flush_matched 调用异常: {e}")
+
         return stats, html_file, ai_result, rss_items, standalone_data, rss_new_items
 
     def _send_notification_if_needed(

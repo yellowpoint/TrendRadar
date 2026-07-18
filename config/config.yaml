@@ -418,6 +418,10 @@ storage:
                                       # 也可通过环境变量 TURSO_AUTH_TOKEN 注入（推荐，避免泄露）
     sync_news: true                   # 是否同步热榜数据
     sync_rss: true                    # 是否同步 RSS 数据
+    sync_mode: "matched_only"                  # 同步策略:
+                                      #   "all"          - 同步全部抓取到的数据（默认）
+                                      #   "matched_only" - 只同步命中关键词/AI 筛选的数据
+                                      #                    （采集阶段暂存，分析阶段后只 flush 命中的）
 
 # ===============================================================
 # 8. AI 模型配置（ai_analysis / ai_translation / ai_filter 共用）
