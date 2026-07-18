@@ -187,6 +187,7 @@ class AppContext:
             remote_config = storage_config.get("REMOTE", {})
             local_config = storage_config.get("LOCAL", {})
             pull_config = storage_config.get("PULL", {})
+            turso_config = storage_config.get("TURSO", {})
 
             self._storage_manager = get_storage_manager(
                 backend_type=storage_config.get("BACKEND", "auto"),
@@ -205,6 +206,13 @@ class AppContext:
                 pull_enabled=pull_config.get("ENABLED", False),
                 pull_days=pull_config.get("DAYS", 7),
                 timezone=self.timezone,
+                turso_config={
+                    "enabled": turso_config.get("ENABLED", False),
+                    "url": turso_config.get("URL", ""),
+                    "auth_token": turso_config.get("AUTH_TOKEN", ""),
+                    "sync_news": turso_config.get("SYNC_NEWS", True),
+                    "sync_rss": turso_config.get("SYNC_RSS", True),
+                },
             )
         return self._storage_manager
 

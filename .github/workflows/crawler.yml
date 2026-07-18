@@ -166,6 +166,10 @@ jobs:
           S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
           S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
           S3_REGION: ${{ secrets.S3_REGION }}
+          # Turso 同步配置（可选，启用后双写数据到 Turso 统一库供其他服务跨日查询）
+          TURSO_ENABLED: ${{ secrets.TURSO_ENABLED }}
+          TURSO_URL: ${{ secrets.TURSO_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           GITHUB_ACTIONS: true
         run: uv run python -m trendradar
 

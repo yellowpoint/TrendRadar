@@ -405,6 +405,20 @@ storage:
     enabled: false                    # 是否启用启动时自动拉取（true=启用, false=关闭）
     days: 7                           # 拉取最近 N 天的数据
 
+  # Turso 同步配置（libSQL 远程数据库，用于跨日统一查询）
+  # 启用后，每次爬取数据在保存到主存储的同时，会双写到 Turso 统一库
+  # 适合需要其他后端服务直接 SQL 查询跨日数据的场景
+  # 详见: https://turso.tech
+  turso:
+    enabled: false                    # 是否启用（true=启用, false=关闭）
+                                      # 也可通过环境变量 TURSO_ENABLED=true 开启
+    url: ""                           # libSQL 连接 URL（如 libsql://your-db.turso.io）
+                                      # 也可通过环境变量 TURSO_URL 注入（推荐，避免泄露）
+    auth_token: ""                    # Turso auth token
+                                      # 也可通过环境变量 TURSO_AUTH_TOKEN 注入（推荐，避免泄露）
+    sync_news: true                   # 是否同步热榜数据
+    sync_rss: true                    # 是否同步 RSS 数据
+
 # ===============================================================
 # 8. AI 模型配置（ai_analysis / ai_translation / ai_filter 共用）
 # ===============================================================

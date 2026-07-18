@@ -39,6 +39,7 @@ class StorageManager:
         pull_enabled: bool = False,
         pull_days: int = 0,
         timezone: str = DEFAULT_TIMEZONE,
+        turso_config: Optional[dict] = None,
     ):
         """
         初始化存储管理器
@@ -54,6 +55,8 @@ class StorageManager:
             pull_enabled: 是否启用启动时自动拉取
             pull_days: 拉取最近 N 天的数据
             timezone: 时区配置
+            turso_config: Turso 同步配置（enabled, url, auth_token, sync_news, sync_rss）
+                          用于把当天数据双写到 Turso 统一库，供其他后端服务跨日查询
         """
         self.backend_type = backend_type
         self.data_dir = data_dir
@@ -65,9 +68,11 @@ class StorageManager:
         self.pull_enabled = pull_enabled
         self.pull_days = pull_days
         self.timezone = timezone
+        self.turso_config = turso_config or {}
 
         self._backend: Optional[StorageBackend] = None
         self._remote_backend: Optional[StorageBackend] = None
+        self._turso_service = None
 
     @staticmethod
     def is_github_actions() -> bool:
@@ -171,7 +176,24 @@ class StorageManager:
                 )
                 print(f"[存储管理器] 使用本地存储后端 (数据目录: {self.data_dir})")
 
+        # 初始化 Turso 同步服务（延迟，单例）
+        self._init_turso_service()
+
         return self._backend
+
+    def _init_turso_service(self) -> None:
+        """延迟初始化 Turso 同步服务（仅在配置启用时生效）"""
+        if self._turso_service is not None:
+            return
+        if not self.turso_config:
+            self._turso_service = None
+            return
+        try:
+            from trendradar.storage.turso_sync import create_turso_service_from_config
+            self._turso_service = create_turso_service_from_config(self.turso_config)
+        except Exception as e:
+            print(f"[存储管理器] Turso 同步服务初始化失败: {e}")
+            self._turso_service = None
 
     def pull_from_remote(self) -> int:
         """
@@ -200,11 +222,25 @@ class StorageManager:
 
     def save_news_data(self, data: NewsData) -> bool:
         """保存新闻数据"""
-        return self.get_backend().save_news_data(data)
+        ok = self.get_backend().save_news_data(data)
+        # 双写到 Turso（失败不影响主流程）
+        if ok and self._turso_service and self._turso_service.enabled:
+            try:
+                self._turso_service.sync_news_data(data)
+            except Exception as e:
+                print(f"[存储管理器] Turso 同步新闻数据异常: {e}")
+        return ok
 
     def save_rss_data(self, data: RSSData) -> bool:
         """保存 RSS 数据"""
-        return self.get_backend().save_rss_data(data)
+        ok = self.get_backend().save_rss_data(data)
+        # 双写到 Turso（失败不影响主流程）
+        if ok and self._turso_service and self._turso_service.enabled:
+            try:
+                self._turso_service.sync_rss_data(data)
+            except Exception as e:
+                print(f"[存储管理器] Turso 同步 RSS 数据异常: {e}")
+        return ok
 
     def get_rss_data(self, date: Optional[str] = None) -> Optional[RSSData]:
         """获取指定日期的所有 RSS 数据（当日汇总模式）"""
@@ -248,6 +284,12 @@ class StorageManager:
             self._backend.cleanup()
         if self._remote_backend:
             self._remote_backend.cleanup()
+        if self._turso_service:
+            try:
+                self._turso_service.cleanup()
+            except Exception as e:
+                print(f"[存储管理器] Turso 清理失败: {e}")
+            self._turso_service = None
 
     def cleanup_old_data(self) -> int:
         """
@@ -380,6 +422,7 @@ def get_storage_manager(
     pull_enabled: bool = False,
     pull_days: int = 0,
     timezone: str = DEFAULT_TIMEZONE,
+    turso_config: Optional[dict] = None,
     force_new: bool = False,
 ) -> StorageManager:
     """
@@ -396,6 +439,7 @@ def get_storage_manager(
         pull_enabled: 是否启用启动时自动拉取
         pull_days: 拉取最近 N 天的数据
         timezone: 时区配置
+        turso_config: Turso 同步配置（enabled, url, auth_token, sync_news, sync_rss）
         force_new: 是否强制创建新实例
 
     Returns:
@@ -415,6 +459,7 @@ def get_storage_manager(
             pull_enabled=pull_enabled,
             pull_days=pull_days,
             timezone=timezone,
+            turso_config=turso_config,
         )
 
     return _storage_manager
