@@ -78,6 +78,21 @@
 /小程序|公众号运营|短视频运营|直播带货/
 /App更新|软件版本|系统升级公告/
 
+# 过滤游戏显卡/驱动软件（非 AI 硬件）
+/GeForce|ShadowPlay|RTX 40|RTX 50|显卡驱动/
+/NVIDIA App|NVIDIA驱动|显卡评测|显卡跑分/
+
+# 过滤纯手机/笔记本评测（无 AI 上下文）
+/手机评测|手机开箱|手机拆解|手机续航|手机充电/
+/笔记本评测|笔记本开箱|笔记本拆解|笔记本续航/
+/手机壳|手机膜|充电宝|数据线|保护套/
+
+# 过滤机器人格斗/娱乐赛事（非产品新闻）
+/格斗赛|拳击赛|比赛|锦标赛|电竞比赛/
+
+# 过滤展会攻略/笔记类水文（保留产品发布新闻）
+/攻略|打卡|逛展|逛馆|必看|必逛|笔记整理|信息爆炸|大佬们都在/
+
 # ───────────────────────────────────────────────────────────────
 
 #                        词组定义区
@@ -136,7 +151,7 @@
 /智元|灵犀|稚晖君|彭志辉|AgiBot/ => 智元机器人
 /众擎|EngineAI|赵同阳/ => 众擎机器人
 /Optimus|擎天柱/ => 特斯拉Optimus
-/大疆|汪滔|灵眸|如影|\bDJI\b|\bRoboMaster\b|\bMavic\b|\bZenmuse\b/ => 大疆
+/大疆|汪滔|\bDJI\b|\bRoboMaster\b/ => 大疆
 /优必选|Ubtech/ => 优必选
 /越疆|Dobot/ => 越疆
 /傅利叶|Fourier|GR-1/ => 傅利叶
@@ -153,21 +168,42 @@
 
 # ═══════════════════════════════════════════════════════════════
 
-#                         AI 硬件品牌（只留硬件业务线）
+#                         AI 硬件品牌（每个品牌独立成组）
 
 # ═══════════════════════════════════════════════════════════════
 
-/Vision Pro|Apple Intelligence|\bAirPods\b/ => 苹果AI硬件
-/Quest|Ray-Ban|Meta智能眼镜|Meta Glasses/ => Meta硬件
-/PICO|PICO 4|PICO Ultra/ => 字节PICO
-/Google Glass|Project Astra|Google AI眼镜/ => 谷歌AI眼镜
-/Insta360|影石/ => 影石Insta360
-/Anker|安克|Eufy|Soundcore/ => 安克
-/雷鸟|雷鸟智能眼镜|TCL RayNeo/ => 雷鸟眼镜
-/Rokid|若琪/ => Rokid
-/XREAL|Nreal/ => XREAL
-/INMO|影目/ => 影目眼镜
-/昇腾|海思|HarmonyOS Next/ => 华为AI硬件
+[Vision Pro]
+/Vision Pro|Apple Vision|空间计算.*苹果|苹果.*空间计算/
+
+[Meta 硬件]
+/\bQuest\b\s*\d|Ray-Ban Meta|Meta智能眼镜|Meta Glasses|Meta VR/
+
+[字节 PICO]
+/PICO\s*\d|PICO Ultra|PICO 4/
+
+[谷歌 AI 眼镜]
+/Google Glass|Project Astra|Google AI眼镜|谷歌.*AR眼镜/
+
+[影石 Insta360]
+/Insta360|影石/
+
+[安克 AI]
+/\bEufy\b.*AI|AI.*\bEufy\b|安克.*AI|AI.*安克|\bAnker\b.*AI|AI.*\bAnker\b/
+
+[雷鸟眼镜]
+/雷鸟|TCL RayNeo/
+
+[Rokid]
+/Rokid|若琪/
+
+[XREAL]
+/XREAL|Nreal/
+
+[影目眼镜]
+/INMO|影目/
+
+[华为 AI 硬件]
+/昇腾|海思.*AI|AI.*海思|华为.*AI芯片|华为.*AI硬件|华为.*AR眼镜|华为.*智能眼镜/
 
 # ═══════════════════════════════════════════════════════════════
 
@@ -201,9 +237,9 @@
 [AI 芯片]
 /英伟达|黄仁勋|\bNVIDIA\b|\bJetson\b|\bJensen Huang\b/ => 英伟达
 /苏姿丰|\bAMD\b|\bRyzen\b.*AI|\bEPYC\b/ => AMD
-/骁龙|Snapdragon/ => 高通骁龙
-/天玑|Dimensity/ => 联发科天玑
-/Core Ultra|Meteor Lake|Intel.*AI/ => 英特尔AI
+/骁龙.*AI|AI.*骁龙|Snapdragon.*AI|AI.*Snapdragon/ => 高通骁龙
+/天玑.*AI|AI.*天玑|Dimensity.*AI|AI.*Dimensity/ => 联发科天玑
+/Intel.*AI|英特尔.*AI/ => 英特尔AI
 /地平线|征程|Horizon Robotics/ => 地平线
 /寒武纪|Cambricon/ => 寒武纪
 /NPU|AI加速器|AI芯片/ => AI加速芯片
@@ -220,15 +256,15 @@
 # ═══════════════════════════════════════════════════════════════
 
 [CES]
-CES
+/(?<![a-zA-Z])CES(?![a-zA-Z])/
 Consumer Electronics Show
 
 [MWC]
-MWC
+/(?<![a-zA-Z])MWC(?![a-zA-Z])/
 Mobile World Congress
 
 [IFA]
-IFA
+/(?<![a-zA-Z])IFA(?![a-zA-Z])/
 柏林消费电子展
 
 [COMPUTEX]
@@ -236,11 +272,23 @@ COMPUTEX
 台北国际电脑展
 
 [世界人工智能大会]
-WAIC
-世界人工智能大会
+/(?<![a-zA-Z])WAIC(?![a-zA-Z])|世界人工智能大会/
++/(WAIC|世界人工智能大会)/
++/(机器人|机器狗|人形|具身|AI眼镜|智能.*眼镜|AR眼镜|VR头显|AI芯片|芯片|NPU|Jetson|AI PC|智能戒指|无人机|Optimus|宇树|智元|众擎|傅利叶|Figure|波士顿动力|Apptronik|Agility|1X机器人|Sanctuary|Rabbit R1|Humane|Plaud|Limitless|Friend AI|雷鸟|Rokid|XREAL|INMO|影目|Vision Pro|Quest|PICO|谷歌.*眼镜|Insta360|安克.*AI|昇腾|寒武纪|地平线|后摩|安谋科技|此芯科技|端侧AI|边缘AI|Copilot\+ PC|智能穿戴|可穿戴|ROBOT)/
+!攻略
+!打卡
+!逛展
+!必看
+!笔记
+!信息爆炸
+!惊艳
+!反常
+!全家桶
+!落地报告
+!产业图谱
 
 [AWE]
-AWE
+/(?<![a-zA-Z])AWE(?![a-zA-Z])/
 中国家电及消费电子博览会
 
 # ═══════════════════════════════════════════════════════════════
@@ -251,8 +299,6 @@ AWE
 
 [AI 硬件]
 AI硬件
-智能硬件
-/Smart Hardware|Smart Device/i => 智能硬件
 
 [AI 眼镜]
 AI眼镜
@@ -280,13 +326,11 @@ AI玩具
 /机械狗|四足机器人|Quadruped|robot dog/i => 四足机器人
 
 [无人机]
-无人机
-/Drone|FPV|穿越机/i => 无人机
+/无人机.*AI|AI.*无人机|无人机.*避障|无人机.*跟踪|无人机.*智能|智能无人机/ => AI无人机
 
 [AR/VR/MR]
-/\bAR\b|\bVR\b|\bMR\b|\bXR\b/ => AR/VR
 /Vision Pro|空间计算|Spatial Computing/i => 空间计算
-/Quest|PICO|VR头显|VR headset/i => VR头显
+/\bQuest\b|PICO|VR头显|VR headset/i => VR头显
 /Mixed Reality/i => 混合现实
 
 [智能戒指]
@@ -305,7 +349,7 @@ AI玩具
 端侧AI
 边缘AI
 /Edge AI|TinyML/i => 边缘AI
-/开发板|树莓派|Raspberry Pi|Jetson/ => 开发板
+/Jetson/ => Jetson开发板
 
 [众筹AI硬件]
 /Kickstarter.*AI|Kickstarter.*hardware|Kickstarter.*robot/i => Kickstarter AI

@@ -378,6 +378,12 @@ class AIFilter:
         try:
             response = self.client.chat(messages)
 
+            # 空响应（reasoning 模型 max_tokens 耗尽在推理阶段的典型表现）
+            # 返回 None 而非 []，表示调用失败，避免整批被误存为"已分析不匹配"
+            if not response or not response.strip():
+                print(f"[AI筛选] 分类响应为空，跳过本批 {len(titles)} 条（不标记已分析，下次会重试）")
+                return None
+
             return self._parse_classify_response(response, titles, tags)
         except Exception as e:
             print(f"[AI筛选] 分类请求失败: {type(e).__name__}: {e}")

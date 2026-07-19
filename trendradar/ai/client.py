@@ -93,12 +93,27 @@ class AIClient:
 
         # 提取响应内容
         # 某些模型/提供商返回 list（内容块）而非 str，统一转为 str
-        content = response.choices[0].message.content
+        message = response.choices[0].message
+        content = message.content
         if isinstance(content, list):
             content = "\n".join(
                 item.get("text", str(item)) if isinstance(item, dict) else str(item)
                 for item in content
             )
+
+        # reasoning 模型（gpt-oss/nemotron/cohere-north 等）在 max_tokens 不足时
+        # content 会返回 None/空，但 reasoning_content 有值。
+        # 此时给出明确警告，便于排查（不直接用 reasoning_content，因为那是推理过程非最终答案）
+        if not content:
+            finish_reason = response.choices[0].finish_reason
+            reasoning = getattr(message, "reasoning_content", None)
+            if reasoning or finish_reason == "length":
+                print(
+                    f"[AI] 警告：模型返回空 content（finish_reason={finish_reason}）。"
+                    f"这通常是 reasoning 模型 max_tokens 不足导致，"
+                    f"请增大 ai.max_tokens 或减小 ai_filter.batch_size"
+                )
+
         return content or ""
 
     def validate_config(self) -> tuple[bool, str]:
