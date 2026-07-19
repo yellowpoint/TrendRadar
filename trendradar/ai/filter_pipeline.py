@@ -560,6 +560,7 @@ class AIFilterPipeline:
                 title_entry = {
                     "title": item.get("title", ""),
                     "source_name": item.get("source_name", ""),
+                    "source_id": item.get("source_id", ""),
                     "url": item.get("url", ""),
                     "mobile_url": item.get("mobile_url", ""),
                     "ranks": item.get("ranks", []),
@@ -567,6 +568,11 @@ class AIFilterPipeline:
                     "count": item.get("count", 1),
                     "is_new": is_new,
                     "time_display": time_display,
+                    "first_time": first_time,
+                    "last_time": last_time,
+                    # RSS: first_time 即文章发布时间；热榜: first_time 为首次上榜时间
+                    "published_at": first_time if source_type == "rss" else "",
+                    "relevance_score": item.get("relevance_score", 0) or 0,
                     "matched_keyword": tag_name,
                 }
 

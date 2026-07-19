@@ -48,6 +48,8 @@ TURSO_SCHEMA_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS idx_filtered_last_crawl ON filtered_items(last_crawl_time)",
     "CREATE INDEX IF NOT EXISTS idx_filtered_title_text ON filtered_items(title)",
     "CREATE INDEX IF NOT EXISTS idx_filtered_url ON filtered_items(url) WHERE url != ''",
+    # 给第三方使用：补 published_at 字段（文章真实发布时间，热榜存榜单时间，RSS 存发布时间）
+    # ALTER TABLE 不支持 IF NOT EXISTS，单独在 _init_schema 中容错执行
 ]
 
 
@@ -125,9 +127,32 @@ class TursoSyncService:
             print(f"[Turso 同步] schema 初始化失败: {e}")
             raise
 
+        # 单独执行 ALTER TABLE ADD COLUMN，列已存在时容错跳过
+        # libSQL 不支持 ALTER TABLE ADD COLUMN IF NOT EXISTS
+        try:
+            self._post({
+                "requests": [
+                    {"type": "execute", "stmt": {"sql": "ALTER TABLE filtered_items ADD COLUMN published_at TEXT"}},
+                    {"type": "close"},
+                ]
+            })
+        except Exception as e:
+            err_str = str(e)
+            # 列已存在属于预期情况，不视为错误
+            if "duplicate column" in err_str.lower() or "already exists" in err_str.lower():
+                pass
+            else:
+                print(f"[Turso 同步] 添加 published_at 列失败: {e}")
+
     @staticmethod
     def _convert_arg(value: Any) -> Dict[str, Any]:
-        """Python 值转 Turso HTTP API 参数格式"""
+        """Python 值转 Turso HTTP API 参数格式
+
+        注意：float 类型的 value 必须是 JSON 数字而非字符串。
+        Turso 服务端（Rust serde）反序列化 float 类型时期望 f64，
+        传字符串会报 "expected f64" 错误，与官方文档"value 是 String"描述不符。
+        integer 类型用字符串 value 是 OK 的（服务端会转换）。
+        """
         if value is None:
             return {"type": "null"}
         if isinstance(value, bool):
@@ -135,9 +160,24 @@ class TursoSyncService:
         if isinstance(value, int):
             return {"type": "integer", "value": str(value)}
         if isinstance(value, float):
-            return {"type": "float", "value": str(value)}
+            # float 用数字 value，不能用字符串（Turso 服务端会报 expected f64）
+            return {"type": "float", "value": value}
         if isinstance(value, bytes):
             return {"type": "blob", "base64": base64.b64encode(value).decode("ascii")}
+        # 字符串形如数字时按数字处理（AI 返回 relevance_score 常为 "0.95" 字符串）
+        if isinstance(value, str):
+            # 排除空字符串和纯空白
+            stripped = value.strip()
+            if not stripped:
+                return {"type": "text", "value": value}
+            try:
+                # 整数形式 → integer 字符串 value（与原生 int 保持一致）
+                if "." not in stripped and "e" not in stripped.lower():
+                    return {"type": "integer", "value": str(int(stripped))}
+                # 浮点形式 → float 数字 value（不能用字符串）
+                return {"type": "float", "value": float(stripped)}
+            except (ValueError, TypeError):
+                return {"type": "text", "value": value}
         return {"type": "text", "value": str(value)}
 
     def _execute_batch(self, statements: List[Tuple[str, List[Any]]]) -> None:
@@ -205,6 +245,7 @@ class TursoSyncService:
                 - last_time (str, 可空)
                 - crawl_date (str, 必填, YYYY-MM-DD)
                 - crawl_time (str, 可空, HH:MM)
+                - published_at (str, 可空, 文章真实发布时间 ISO 格式)
 
         Returns:
             True 表示成功（或无数据），False 表示失败
@@ -232,8 +273,8 @@ class TursoSyncService:
                     INSERT INTO filtered_items
                         (title, url, mobile_url, source_id, source_name, source_type,
                          rank, relevance_score, first_crawl_time, last_crawl_time,
-                         crawl_date, crawl_time)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         crawl_date, crawl_time, published_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(source_id, crawl_date, title) DO UPDATE SET
                         url = COALESCE(NULLIF(excluded.url, ''), filtered_items.url),
                         mobile_url = COALESCE(NULLIF(excluded.mobile_url, ''), filtered_items.mobile_url),
@@ -243,6 +284,7 @@ class TursoSyncService:
                         first_crawl_time = COALESCE(NULLIF(filtered_items.first_crawl_time, ''), excluded.first_crawl_time),
                         last_crawl_time = COALESCE(NULLIF(excluded.last_crawl_time, ''), filtered_items.last_crawl_time),
                         crawl_time = COALESCE(NULLIF(excluded.crawl_time, ''), filtered_items.crawl_time),
+                        published_at = COALESCE(NULLIF(excluded.published_at, ''), filtered_items.published_at),
                         updated_at = CURRENT_TIMESTAMP
                     """,
                     [
@@ -258,6 +300,7 @@ class TursoSyncService:
                         item.get("last_time", "") or "",
                         crawl_date,
                         item.get("crawl_time", "") or "",
+                        item.get("published_at", "") or item.get("first_time", "") or "",
                     ],
                 ))
 

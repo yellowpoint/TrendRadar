@@ -31,7 +31,7 @@ from trendradar.storage import convert_crawl_results_to_news_data
 from trendradar.utils.time import DEFAULT_TIMEZONE, is_within_days, calculate_days_old
 from trendradar.ai import AIAnalyzer, AIAnalysisResult
 from trendradar.core.scheduler import ResolvedSchedule
-from trendradar.commands import check_all_versions, run_doctor, run_test_notification, handle_status_commands
+from trendradar.commands import check_all_versions, run_doctor, run_test_notification, handle_status_commands, run_check_rss, run_check_platform, run_check_all
 from trendradar.commands.version import _fetch_remote_version, _parse_version
 
 
@@ -858,6 +858,18 @@ class NewsAnalyzer:
     ) -> Dict:
         """从统计结果中的 title_data 构造 Turso 命中条目（兼容字段命名差异）"""
         ranks = td.get("ranks") or []
+        published_at = td.get("published_at", "") or td.get("first_time", "") or ""
+        # AI 返回的 relevance_score 可能是字符串 "0.9"，强制转 float 避免 Turso 类型错误
+        try:
+            relevance_score = float(td.get("relevance_score", 0) or 0)
+        except (ValueError, TypeError):
+            relevance_score = 0.0
+        # rank 同样防御一下
+        try:
+            rank_val = ranks[-1] if ranks else td.get("rank", 0) or 0
+            rank_val = int(rank_val)
+        except (ValueError, TypeError):
+            rank_val = 0
         return {
             "title": td.get("title", ""),
             "url": td.get("url", "") or "",
@@ -866,12 +878,13 @@ class NewsAnalyzer:
             "source_id": source_id,
             "source_name": td.get("source_name", "") or "",
             "source_type": source_type,
-            "rank": ranks[-1] if ranks else td.get("rank", 0) or 0,
-            "relevance_score": td.get("relevance_score", 0) or 0,
-            "first_time": td.get("first_time", "") or td.get("published_at", "") or "",
-            "last_time": td.get("last_time", "") or td.get("published_at", "") or "",
+            "rank": rank_val,
+            "relevance_score": relevance_score,
+            "first_time": td.get("first_time", "") or published_at,
+            "last_time": td.get("last_time", "") or published_at,
             "crawl_date": crawl_date,
             "crawl_time": crawl_time,
+            "published_at": published_at,
         }
 
     def _send_notification_if_needed(
@@ -1732,17 +1745,29 @@ def main():
 诊断命令:
   --doctor               运行环境与配置体检
   --test-notification    发送测试通知到已配置渠道
+源级筛选命令:
+  --check-rss URL        预检单个 RSS 源是否与兴趣主题相关
+  --check-source ID      预检单个热榜平台是否与兴趣主题相关
+  --check-all-sources    批量预检 config.yaml 中所有 RSS+热榜源
 
 示例:
   python -m trendradar                    # 正常运行
   python -m trendradar --show-schedule    # 查看当前调度状态
   python -m trendradar --doctor           # 运行一键体检
   python -m trendradar --test-notification # 测试通知渠道连通性
+  python -m trendradar --check-rss https://example.com/rss
+  python -m trendradar --check-source zhihu --sample-size 30
+  python -m trendradar --check-all-sources
 """
     )
     parser.add_argument("--show-schedule", action="store_true", help="显示当前调度状态")
     parser.add_argument("--doctor", action="store_true", help="运行环境与配置体检")
     parser.add_argument("--test-notification", action="store_true", help="发送测试通知到已配置渠道")
+    parser.add_argument("--check-rss", metavar="URL", help="预检单个 RSS 源是否与兴趣主题相关")
+    parser.add_argument("--check-source", metavar="ID", help="预检单个热榜平台是否与兴趣主题相关")
+    parser.add_argument("--check-all-sources", action="store_true", help="批量预检所有已配置的 RSS+热榜源")
+    parser.add_argument("--source-name", default="", help="配合 --check-rss 使用：自定义源名称")
+    parser.add_argument("--sample-size", type=int, default=20, help="采样条目数（默认 20，仅对源级筛选命令生效）")
 
     args = parser.parse_args()
 
@@ -1753,6 +1778,29 @@ def main():
             if not ok:
                 raise SystemExit(1)
             return
+
+        # 源级筛选命令：在加载主配置之前提前处理，避免触发完整爬虫流程
+        if args.check_rss:
+            rc = run_check_rss(
+                url=args.check_rss,
+                name=args.source_name,
+                sample_size=args.sample_size,
+                debug=False,
+            )
+            raise SystemExit(rc)
+        if args.check_source:
+            rc = run_check_platform(
+                platform_id=args.check_source,
+                sample_size=args.sample_size,
+                debug=False,
+            )
+            raise SystemExit(rc)
+        if args.check_all_sources:
+            rc = run_check_all(
+                sample_size=args.sample_size,
+                debug=False,
+            )
+            raise SystemExit(rc)
 
         config = load_config()
 

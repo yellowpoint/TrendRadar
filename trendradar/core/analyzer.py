@@ -346,6 +346,7 @@ def count_word_frequency(
                 word_stats[group_key]["titles"][source_id].append(
                     {
                         "title": title,
+                        "source_id": source_id,
                         "source_name": source_name,
                         "first_time": first_time,
                         "last_time": last_time,
@@ -644,8 +645,12 @@ def count_rss_frequency(
 
                 title_data = {
                     "title": title,
+                    "source_id": item.get("feed_id", item.get("feed_name", "rss")),
                     "source_name": item.get("feed_name", item.get("feed_id", "RSS")),
                     "time_display": time_display,
+                    "published_at": published_at,  # 原 ISO 字符串，供 Turso 同步使用
+                    "first_time": published_at,
+                    "last_time": published_at,
                     "count": 1,  # RSS 条目通常只出现一次
                     "ranks": [rank],
                     "rank_threshold": rank_threshold,
