@@ -797,50 +797,82 @@ class NewsAnalyzer:
                 translate_report_func=translate_report_func,
             )
 
-        # matched_only 模式：从 stats / rss_items 提取命中的 url/title，flush 到 Turso
-        # 非 matched_only 模式下此调用为空操作
+        # 把命中的热榜 + RSS 条目统一同步到 Turso（简化版：只存最终筛选结果）
         try:
-            matched_news_urls: set = set()
-            matched_news_titles: set = set()
+            crawl_date = self.ctx.format_date()
+            crawl_time = self.ctx.format_time()
+            items_to_sync: List[Dict] = []
+
+            # 热榜命中项
             for stat in (stats or []):
                 titles = stat.get("titles", [])
-                # stats 的 titles 可能是 list（扁平）或 dict（按 source_id 分组）
-                if isinstance(titles, list):
-                    for td in titles:
-                        if td.get("url"):
-                            matched_news_urls.add(td["url"])
-                        elif td.get("title"):
-                            matched_news_titles.add(td["title"])
-                elif isinstance(titles, dict):
-                    for _source_id, td_list in titles.items():
+                # titles 可能是 list（扁平/AI筛选）或 dict（按 source_id 分组/关键词匹配）
+                if isinstance(titles, dict):
+                    for source_id, td_list in titles.items():
                         for td in td_list:
-                            if td.get("url"):
-                                matched_news_urls.add(td["url"])
-                            elif td.get("title"):
-                                matched_news_titles.add(td["title"])
+                            items_to_sync.append(self._build_turso_item(
+                                td, source_id=source_id, source_type="hotlist",
+                                crawl_date=crawl_date, crawl_time=crawl_time,
+                            ))
+                elif isinstance(titles, list):
+                    for td in titles:
+                        items_to_sync.append(self._build_turso_item(
+                            td, source_id=td.get("source_id", "") or "hotlist",
+                            source_type="hotlist",
+                            crawl_date=crawl_date, crawl_time=crawl_time,
+                        ))
 
-            matched_rss_urls: set = set()
+            # RSS 命中项
             for stat in (rss_items or []):
                 titles = stat.get("titles", [])
-                if isinstance(titles, list):
-                    for td in titles:
-                        if td.get("url"):
-                            matched_rss_urls.add(td["url"])
-                elif isinstance(titles, dict):
-                    for _feed_id, td_list in titles.items():
+                if isinstance(titles, dict):
+                    for feed_id, td_list in titles.items():
                         for td in td_list:
-                            if td.get("url"):
-                                matched_rss_urls.add(td["url"])
+                            items_to_sync.append(self._build_turso_item(
+                                td, source_id=td.get("source_id", "") or feed_id,
+                                source_type="rss",
+                                crawl_date=crawl_date, crawl_time=crawl_time,
+                            ))
+                elif isinstance(titles, list):
+                    for td in titles:
+                        items_to_sync.append(self._build_turso_item(
+                            td, source_id=td.get("source_id", "")
+                                       or td.get("source_name", "") or "rss",
+                            source_type="rss",
+                            crawl_date=crawl_date, crawl_time=crawl_time,
+                        ))
 
-            self.storage_manager.flush_turso_matched(
-                matched_news_urls=matched_news_urls,
-                matched_news_titles=matched_news_titles,
-                matched_rss_urls=matched_rss_urls,
-            )
+            self.storage_manager.sync_filtered_to_turso(items_to_sync)
         except Exception as e:
-            print(f"[Turso 同步] flush_matched 调用异常: {e}")
+            print(f"[Turso 同步] 命中数据收集异常: {e}")
 
         return stats, html_file, ai_result, rss_items, standalone_data, rss_new_items
+
+    @staticmethod
+    def _build_turso_item(
+        td: Dict,
+        source_id: str,
+        source_type: str,
+        crawl_date: str,
+        crawl_time: str,
+    ) -> Dict:
+        """从统计结果中的 title_data 构造 Turso 命中条目（兼容字段命名差异）"""
+        ranks = td.get("ranks") or []
+        return {
+            "title": td.get("title", ""),
+            "url": td.get("url", "") or "",
+            # 兼容 mobile_url / mobileUrl 两种命名
+            "mobile_url": td.get("mobile_url", "") or td.get("mobileUrl", "") or "",
+            "source_id": source_id,
+            "source_name": td.get("source_name", "") or "",
+            "source_type": source_type,
+            "rank": ranks[-1] if ranks else td.get("rank", 0) or 0,
+            "relevance_score": td.get("relevance_score", 0) or 0,
+            "first_time": td.get("first_time", "") or td.get("published_at", "") or "",
+            "last_time": td.get("last_time", "") or td.get("published_at", "") or "",
+            "crawl_date": crawl_date,
+            "crawl_time": crawl_time,
+        }
 
     def _send_notification_if_needed(
         self,

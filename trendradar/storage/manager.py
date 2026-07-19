@@ -6,7 +6,7 @@
 """
 
 import os
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from trendradar.storage.base import StorageBackend, NewsData, RSSData
 from trendradar.utils.time import DEFAULT_TIMEZONE
@@ -55,8 +55,8 @@ class StorageManager:
             pull_enabled: 是否启用启动时自动拉取
             pull_days: 拉取最近 N 天的数据
             timezone: 时区配置
-            turso_config: Turso 同步配置（enabled, url, auth_token, sync_news, sync_rss）
-                          用于把当天数据双写到 Turso 统一库，供其他后端服务跨日查询
+            turso_config: Turso 同步配置（enabled, url, auth_token）
+                          仅同步最终筛选出来的命中结果到 Turso 统一库，供其他后端服务跨日查询
         """
         self.backend_type = backend_type
         self.data_dir = data_dir
@@ -222,53 +222,33 @@ class StorageManager:
 
     def save_news_data(self, data: NewsData) -> bool:
         """保存新闻数据"""
-        ok = self.get_backend().save_news_data(data)
-        # 双写到 Turso（失败不影响主流程）
-        if ok and self._turso_service and self._turso_service.enabled:
-            try:
-                self._turso_service.sync_news_data(data)
-            except Exception as e:
-                print(f"[存储管理器] Turso 同步新闻数据异常: {e}")
-        return ok
+        return self.get_backend().save_news_data(data)
 
     def save_rss_data(self, data: RSSData) -> bool:
         """保存 RSS 数据"""
-        ok = self.get_backend().save_rss_data(data)
-        # 双写到 Turso（失败不影响主流程）
-        if ok and self._turso_service and self._turso_service.enabled:
-            try:
-                self._turso_service.sync_rss_data(data)
-            except Exception as e:
-                print(f"[存储管理器] Turso 同步 RSS 数据异常: {e}")
-        return ok
+        return self.get_backend().save_rss_data(data)
 
-    def flush_turso_matched(
-        self,
-        matched_news_urls: Optional[set] = None,
-        matched_news_titles: Optional[set] = None,
-        matched_rss_urls: Optional[set] = None,
-    ) -> None:
+    def sync_filtered_to_turso(self, items: List[Dict[str, Any]]) -> None:
         """
-        在 matched_only 模式下，把暂存中命中的数据同步到 Turso。
+        把筛选后的命中条目同步到 Turso（热榜 + RSS 统一存储）。
 
-        应在分析流水线完成后（拿到 stats / rss_items）调用，从 stats 提取命中的 url/title
-        集合传入。非 matched_only 模式下此方法为空操作。
+        应在分析流水线完成后调用，传入命中的完整数据项列表。Turso 简化设计：
+        只保留这一张 filtered_items 表，不再双写采集阶段的原始数据。
 
         Args:
-            matched_news_urls: 命中的新闻 URL 集合
-            matched_news_titles: 命中的新闻标题集合（url 为空时兜底）
-            matched_rss_urls: 命中的 RSS URL 集合
+            items: 命中数据字典列表，每个字典应包含：
+                - title (str, 必填)
+                - url, mobile_url, source_id, source_name (str)
+                - source_type ('hotlist' 或 'rss', 默认 'hotlist')
+                - rank, relevance_score (数值)
+                - first_time, last_time, crawl_date, crawl_time (str)
         """
         if not self._turso_service or not self._turso_service.enabled:
             return
         try:
-            self._turso_service.flush_matched(
-                matched_news_urls=matched_news_urls,
-                matched_news_titles=matched_news_titles,
-                matched_rss_urls=matched_rss_urls,
-            )
+            self._turso_service.sync_filtered_items(items)
         except Exception as e:
-            print(f"[存储管理器] Turso flush_matched 异常: {e}")
+            print(f"[存储管理器] Turso 同步命中数据异常: {e}")
 
     def get_rss_data(self, date: Optional[str] = None) -> Optional[RSSData]:
         """获取指定日期的所有 RSS 数据（当日汇总模式）"""
@@ -467,7 +447,7 @@ def get_storage_manager(
         pull_enabled: 是否启用启动时自动拉取
         pull_days: 拉取最近 N 天的数据
         timezone: 时区配置
-        turso_config: Turso 同步配置（enabled, url, auth_token, sync_news, sync_rss）
+        turso_config: Turso 同步配置（enabled, url, auth_token）
         force_new: 是否强制创建新实例
 
     Returns:

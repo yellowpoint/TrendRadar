@@ -1,8 +1,8 @@
 # TrendRadar Turso 数据库接入文档
 
-本文档面向需要在其他应用中读取 TrendRadar 爬取数据(热榜 + RSS)的开发者。
+本文档面向需要在其他应用中读取 TrendRadar 筛选结果(热榜 + RSS 命中条目)的开发者。
 
-TrendRadar 通过 **Turso(libSQL)远程数据库**对外提供统一查询接口,数据按日累积,支持跨日 SQL 查询,无需下载多个按日分库的 `.db` 文件。
+TrendRadar 通过 **Turso(libSQL)远程数据库**对外提供统一查询接口。简化设计:**只存储最终筛选出来的命中结果**(关键词匹配 / AI 筛选),热榜和 RSS 统一存到单表 `filtered_items`,通过 `source_type` 字段区分来源,不再分表。
 
 ---
 
@@ -22,31 +22,32 @@ TrendRadar 通过 **Turso(libSQL)远程数据库**对外提供统一查询接口
 ## 1. 架构概览
 
 ```
-┌──────────────────────────┐         ┌──────────────────────┐
-│  TrendRadar 爬虫          │         │  你的另一个应用       │
-│  (GitHub Actions 每小时)  │         │  (后端服务/BI/AI)    │
-│                          │         │                      │
-│  1. 爬取数据              │         │  HTTP 查询           │
-│  2. 写本地 SQLite(按日)  │         │  ↓                   │
-│  3. 双写 Turso(统一库)  │ ──────► │  Turso(libSQL)      │
-└──────────────────────────┘  写入   └──────────────────────┘
-                                        ↑
-                                        │ 读取(SQL)
-                                        │
-                              ┌──────────────────────┐
-                              │  Turso 云端数据库     │
-                              │  - news_items         │
-                              │  - rss_items          │
-                              │  - rank_history       │
-                              │  - ...                │
-                              └──────────────────────┘
+┌─────────────────────────────────────┐         ┌──────────────────────┐
+│  TrendRadar 爬虫                     │         │  你的另一个应用       │
+│  (GitHub Actions 每小时)             │         │  (后端服务/BI/AI)    │
+│                                     │         │                      │
+│  1. 爬取数据(热榜 + RSS)             │         │  HTTP 查询           │
+│  2. 写本地 SQLite(按日全量保存)     │         │  ↓                   │
+│  3. 关键词匹配 / AI 筛选             │         │  Turso(libSQL)      │
+│  4. 把命中结果同步到 Turso(单表)    │ ──────► │                      │
+└─────────────────────────────────────┘  写入   └──────────────────────┘
+                                                       ↑
+                                                       │ 读取(SQL)
+                                                       │
+                                             ┌──────────────────────┐
+                                             │  Turso 云端数据库     │
+                                             │  - filtered_items    │
+                                             │    (热榜 + RSS 统一) │
+                                             └──────────────────────┘
 ```
 
 **关键设计**:
-- 写入端:TrendRadar 爬虫独占,只写不读
-- 读取端:你的应用只读不写
-- 数据载体:Turso 托管的 libSQL,通过 HTTP API 访问
-- 协议:标准 HTTP/HTTPS,无 SDK 依赖
+- **只存筛选结果**:不再双写采集阶段的原始数据,只在分析流水线完成后同步命中条目
+- **单表统一存储**:热榜和 RSS 共用 `filtered_items` 表,通过 `source_type` 字段区分
+- **写入端**:TrendRadar 爬虫独占,只写不读
+- **读取端**:你的应用只读不写
+- **数据载体**:Turso 托管的 libSQL,通过 HTTP API 访问
+- **协议**:标准 HTTP/HTTPS,无 SDK 依赖
 
 ---
 
@@ -85,7 +86,7 @@ Content-Type: application/json
     {
       "type": "execute",
       "stmt": {
-        "sql": "SELECT * FROM news_items WHERE crawl_date = ?",
+        "sql": "SELECT * FROM filtered_items WHERE crawl_date = ?",
         "args": [
           {"type": "text", "value": "2026-07-18"}
         ]
@@ -177,7 +178,7 @@ resp = requests.post(
     },
     json={
         "requests": [
-            {"type": "execute", "stmt": {"sql": "SELECT COUNT(*) FROM news_items"}},
+            {"type": "execute", "stmt": {"sql": "SELECT COUNT(*) FROM filtered_items"}},
             {"type": "close"},
         ]
     },
@@ -187,7 +188,7 @@ resp = requests.post(
 data = resp.json()
 result = data["results"][0]["response"]["result"]
 count = int(result["rows"][0][0]["value"])
-print(f"新闻总条数: {count}")
+print(f"命中条目总数: {count}")
 ```
 
 ### 3.7 最小调用示例(cURL)
@@ -208,123 +209,46 @@ curl -X POST https://<your-db-id>.turso.io/v2/pipeline \
 
 ## 4. 数据库 Schema
 
-### 4.1 `platforms` 平台表(跨日共享)
+Turso 库只有 **一张表** `filtered_items`,同时存放热榜和 RSS 的命中条目。
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | TEXT PK | 平台 ID,如 `ithome`、`zhihu` |
-| `name` | TEXT | 显示名称,如「IT之家」「知乎」 |
-| `is_active` | INTEGER | 1=启用 |
-| `updated_at` | TIMESTAMP | 更新时间 |
-
-**当前 8 个平台**:
-
-| id | name |
-|---|---|
-| `ithome` | IT之家 |
-| `sspai` | 少数派 |
-| `solidot` | Solidot |
-| `hackernews` | Hacker News |
-| `producthunt` | ProductHunt |
-| `zhihu` | 知乎 |
-| `weibo` | 微博 |
-| `bilibili-hot-search` | bilibili 热搜 |
-
----
-
-### 4.2 `news_items` 热榜条目表(跨日累积)
+### 4.1 `filtered_items` 命中条目统一表
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `id` | INTEGER PK | 自增 |
-| `title` | TEXT | 新闻标题 |
-| `platform_id` | TEXT FK | 所属平台,关联 `platforms.id` |
-| `rank` | INTEGER | 当前排名 |
-| `url` | TEXT | 链接(可能为空) |
-| `mobile_url` | TEXT | 移动端链接(可能为空) |
-| `first_crawl_time` | TEXT | 首次抓取时间(HH:MM 格式) |
-| `last_crawl_time` | TEXT | 最后抓取时间(HH:MM) |
-| `crawl_count` | INTEGER | 当日被抓取到的次数 |
-| `crawl_date` | TEXT | **数据所属日期 YYYY-MM-DD**(跨日查询关键字段) |
+| `title` | TEXT NOT NULL | 标题(热榜新闻标题 / RSS 文章标题) |
+| `url` | TEXT | 链接(可能为空,热榜偶尔为空) |
+| `mobile_url` | TEXT | 移动端链接(仅热榜有,RSS 为空) |
+| `source_id` | TEXT NOT NULL | 来源 ID(热榜:`ithome`/`zhihu` 等平台 ID;RSS:`hacker-news` 等 feed ID) |
+| `source_name` | TEXT | 来源显示名称(如「IT之家」「Hacker News」) |
+| `source_type` | TEXT NOT NULL | 来源类型:`hotlist` 或 `rss` |
+| `rank` | INTEGER | 当前排名(热榜的排名,RSS 默认 0 或基于发布时间) |
+| `relevance_score` | REAL | AI 筛选相关度评分(0.0~1.0,关键词匹配模式为 0) |
+| `first_crawl_time` | TEXT | 首次抓取时间(热榜:HH:MM 格式;RSS:ISO 格式发布时间) |
+| `last_crawl_time` | TEXT | 最后抓取时间(同上) |
+| `crawl_date` | TEXT NOT NULL | **数据所属日期 YYYY-MM-DD**(跨日查询关键字段) |
+| `crawl_time` | TEXT | 本次抓取的 HH:MM 时间 |
 | `created_at` | TIMESTAMP | 入库时间 |
 | `updated_at` | TIMESTAMP | 更新时间 |
 
 **唯一索引**:
-- `idx_news_url_platform_date`:`(url, platform_id, crawl_date) WHERE url != ''`
-- `idx_news_title_platform_date`:`(title, platform_id, crawl_date)`
+- `idx_filtered_unique`:`(source_id, crawl_date, title)` — 同源同日同标题视为同一行
 
 **普通索引**:
-- `idx_news_platform`:`(platform_id)`
-- `idx_news_crawl_date`:`(crawl_date)`
-- `idx_news_last_crawl`:`(last_crawl_time)`
-- `idx_news_title`:`(title)`
+- `idx_filtered_crawl_date`:`(crawl_date)`
+- `idx_filtered_source`:`(source_id, source_type)`
+- `idx_filtered_last_crawl`:`(last_crawl_time)`
+- `idx_filtered_title_text`:`(title)`
+- `idx_filtered_url`:`(url) WHERE url != ''`
 
----
+### 4.2 来源标识对照
 
-### 4.3 `rank_history` 排名历史表
-
-| 字段 | 类型 | 说明 |
+| `source_type` | `source_id` 示例 | `source_name` 示例 |
 |---|---|---|
-| `id` | INTEGER PK | 自增 |
-| `news_item_id` | INTEGER FK | 关联 `news_items.id` |
-| `rank` | INTEGER | 该次抓取的排名 |
-| `crawl_time` | TEXT | 抓取时间(HH:MM) |
-| `crawl_date` | TEXT | 抓取日期 YYYY-MM-DD |
-| `created_at` | TIMESTAMP | 入库时间 |
+| `hotlist` | `ithome` / `zhihu` / `weibo` / `bilibili-hot-search` | IT之家 / 知乎 / 微博 / bilibili 热搜 |
+| `rss` | `hacker-news` / `ifanr` / `techcrunch` | Hacker News / 爱范儿 / TechCrunch |
 
-**追加写入**:同一条新闻每次被抓取都会追加一行,可用于绘制排名变化曲线。
-
-**索引**:`idx_rank_history_news`(`news_item_id`)
-
----
-
-### 4.4 `crawl_records` 抓取批次表
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | INTEGER PK | 自增 |
-| `crawl_date` | TEXT | YYYY-MM-DD |
-| `crawl_time` | TEXT | HH:MM |
-| `total_items` | INTEGER | 该批次总条目数 |
-| `created_at` | TIMESTAMP | 入库时间 |
-
-**唯一索引**:`(crawl_date, crawl_time)`
-
----
-
-### 4.5 `rss_feeds` RSS 源表(跨日共享)
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | TEXT PK | 源 ID,如 `hacker-news`、`ifanr` |
-| `name` | TEXT | 显示名称 |
-| `is_active` | INTEGER | 1=启用 |
-| `created_at` / `updated_at` | TIMESTAMP | 时间戳 |
-
-当前约 22 个 RSS 源(科技媒体为主),如:爱范儿、量子位、机器之心、36氪、The Verge、Engadget、TechCrunch 等。
-
----
-
-### 4.6 `rss_items` RSS 条目表(跨日累积)
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | INTEGER PK | 自增 |
-| `title` | TEXT | 文章标题 |
-| `feed_id` | TEXT FK | 关联 `rss_feeds.id` |
-| `url` | TEXT | 文章链接 |
-| `guid` | TEXT | RSS guid / Atom id(可能为空) |
-| `published_at` | TEXT | 发布时间(ISO 格式) |
-| `summary` | TEXT | 摘要 |
-| `author` | TEXT | 作者 |
-| `first_crawl_time` / `last_crawl_time` | TEXT | HH:MM |
-| `crawl_count` | INTEGER | 当日抓取次数 |
-| `crawl_date` | TEXT | YYYY-MM-DD |
-| `created_at` / `updated_at` | TIMESTAMP | 时间戳 |
-
-**唯一索引**:
-- `idx_rss_url_feed_date`:`(url, feed_id, crawl_date)`
-- `idx_rss_guid_feed_date`:`(guid, feed_id, crawl_date) WHERE guid != ''`
+> **注意**:RSS 在关键词匹配模式下可能缺失 `source_id`,会用 `source_name` 作为 fallback。极端情况下 `source_id` 可能是 `rss`。
 
 ---
 
@@ -333,33 +257,25 @@ curl -X POST https://<your-db-id>.turso.io/v2/pipeline \
 | 维度 | 行为 |
 |---|---|
 | **抓取频率** | GitHub Actions 每小时执行一次 |
-| **同日同条新闻** | `news_items` 行数不增长,`crawl_count` +1,`rank_history` 追加一行 |
-| **跨日同条新闻** | `news_items` **新增一行**(`crawl_date` 不同视为两条) |
+| **同日同条命中** | `filtered_items` 行数不增长,`rank` / `last_crawl_time` / `relevance_score` 更新 |
+| **跨日同条命中** | `filtered_items` **新增一行**(`crawl_date` 不同视为两条) |
 | **每条记录大小** | < 1KB(纯文本字段) |
-| **单日数据量(全量模式)** | `news_items` ~200 行,`rss_items` ~400 行,`rank_history` ~4800 行 |
-| **单日数据量(命中模式)** | `news_items` ~10-50 行,`rss_items` ~20-100 行(仅命中关键词/AI 筛选的) |
-| **月累积数据量** | 全量 < 50MB,命中模式 < 5MB |
+| **单日数据量** | 10-100 行(仅命中关键词/AI 筛选的条目) |
+| **月累积数据量** | < 5MB |
 
-### 5.1 同步模式(sync_mode)
+### 5.1 同步时机
 
-TrendRadar 支持两种 Turso 同步模式,通过 `config.yaml` 的 `storage.turso.sync_mode` 配置:
+TrendRadar 的 Turso 同步**只在分析流水线完成后**触发一次:
 
-| 模式 | 值 | 行为 | 适用场景 |
-|---|---|---|---|
-| **全量同步**(默认) | `"all"` | 采集阶段把所有抓取到的数据同步到 Turso | 需要完整数据留存、跨日趋势分析 |
-| **只存命中** | `"matched_only"` | 采集阶段暂存,分析阶段后只把命中关键词/AI 筛选的数据同步到 Turso | 只关心筛选结果、节省存储 |
+1. 采集阶段:爬取数据 → 本地 SQLite 全量保存(Turso 不写入)
+2. 分析阶段:关键词匹配 / AI 筛选 → 生成 `stats` 和 `rss_items`(命中结果)
+3. 同步阶段:从 `stats` / `rss_items` 提取命中条目 → 批量 upsert 到 Turso `filtered_items`
 
-**matched_only 模式的工作流程**:
-
-1. 采集阶段:爬取数据 → 本地 SQLite 全量保存 → Turso 暂存到内存(不发起 HTTP 请求)
-2. 分析阶段:关键词匹配 / AI 筛选 → 生成 `stats`(命中结果)
-3. Flush 阶段:从 `stats` 提取命中的 `url` / `title` 集合 → 从暂存中筛选命中的条目 → 批量同步到 Turso → 清空暂存
-
-**matched_only 模式的特点**:
+**特点**:
 - 本地 SQLite 仍全量保存(不影响 HTML 报告生成)
-- 如果分析失败(如 AI 筛选异常),暂存数据会被丢弃(不会同步到 Turso)
 - Turso 中只有命中筛选的数据,存储量大幅减少
-- `rank_history` 只记录命中条目的排名历史
+- 如果分析失败(如 AI 筛选异常),不会同步到 Turso
+- 不再区分热榜/RSS 表,统一存到 `filtered_items`,通过 `source_type` 区分
 
 **配置示例**:
 
@@ -367,115 +283,103 @@ TrendRadar 支持两种 Turso 同步模式,通过 `config.yaml` 的 `storage.tur
 storage:
   turso:
     enabled: true
-    sync_mode: "matched_only"   # 只存命中的
-    sync_news: true
-    sync_rss: true
+    url: "libsql://your-db.turso.io"      # 或用环境变量 TURSO_URL
+    auth_token: "xxx"                      # 或用环境变量 TURSO_AUTH_TOKEN
 ```
 
 ---
 
 ## 6. 典型查询示例
 
-### 6.1 查今天某平台的完整热榜
+### 6.1 查今天的所有命中条目
 
 ```sql
-SELECT title, rank, url, mobile_url, crawl_count, last_crawl_time
-FROM news_items
+SELECT title, source_id, source_name, source_type, rank, url, relevance_score
+FROM filtered_items
 WHERE crawl_date = date('now', '+8 hours')  -- 北京时区
-  AND platform_id = 'zhihu'
-ORDER BY rank;
+ORDER BY source_type, source_id, rank;
 ```
 
-### 6.2 查最近 7 天所有平台的热榜(分页)
+### 6.2 查最近 7 天的命中条目(分页)
 
 ```sql
-SELECT crawl_date, platform_id, title, rank, url
-FROM news_items
+SELECT crawl_date, source_type, source_id, source_name, title, rank, url
+FROM filtered_items
 WHERE crawl_date >= date('now', '+8 hours', '-7 days')
-ORDER BY crawl_date DESC, platform_id, rank
+ORDER BY crawl_date DESC, source_type, source_id, rank
 LIMIT 100 OFFSET 0;
 ```
 
-### 6.3 某条新闻的排名变化曲线
+### 6.3 只看热榜命中
 
 ```sql
--- 先找到 news_item_id
-SELECT id FROM news_items
-WHERE title = ?
-  AND platform_id = ?
-  AND crawl_date = ?;
-
--- 再查排名历史
-SELECT crawl_time, rank
-FROM rank_history
-WHERE news_item_id = ?
-  AND crawl_date = ?
-ORDER BY crawl_time;
+SELECT crawl_date, source_id, source_name, title, rank, url, mobile_url
+FROM filtered_items
+WHERE source_type = 'hotlist'
+  AND crawl_date = date('now', '+8 hours')
+ORDER BY source_id, rank;
 ```
 
-### 6.4 跨日热度持续榜(连续上榜 N 天的新闻)
+### 6.4 只看 RSS 命中
 
 ```sql
-SELECT title, platform_id,
+SELECT crawl_date, source_id, source_name, title, url, first_crawl_time AS published_at
+FROM filtered_items
+WHERE source_type = 'rss'
+  AND crawl_date >= date('now', '+8 hours', '-3 days')
+ORDER BY first_crawl_time DESC NULLS LAST
+LIMIT 50;
+```
+
+### 6.5 跨日热度持续榜(连续上榜 N 天的命中条目)
+
+```sql
+SELECT title, source_id, source_name,
        COUNT(DISTINCT crawl_date) AS days,
        MIN(crawl_date) AS first_seen,
-       MAX(crawl_date) AS last_seen
-FROM news_items
-WHERE crawl_date >= date('now', '+8 hours', '-7 days')
-GROUP BY title, platform_id
+       MAX(crawl_date) AS last_seen,
+       MAX(rank) AS best_rank
+FROM filtered_items
+WHERE source_type = 'hotlist'
+  AND crawl_date >= date('now', '+8 hours', '-7 days')
+GROUP BY title, source_id, source_name
 HAVING days >= 3
 ORDER BY days DESC, last_seen DESC;
 ```
 
-### 6.5 各平台最近一次抓取的元数据
+### 6.6 按来源统计当天的命中数
 
 ```sql
-SELECT crawl_date, crawl_time, total_items
-FROM crawl_records
-ORDER BY crawl_date DESC, crawl_time DESC
-LIMIT 20;
-```
-
-### 6.6 查最近 RSS 文章(按发布时间倒序)
-
-```sql
-SELECT i.title, i.url, i.published_at, i.summary, i.author,
-       f.name AS feed_name
-FROM rss_items i
-JOIN rss_feeds f ON f.id = i.feed_id
-WHERE i.crawl_date >= date('now', '+8 hours', '-3 days')
-ORDER BY i.published_at DESC NULLS LAST
-LIMIT 50;
-```
-
-### 6.7 获取所有平台列表
-
-```sql
-SELECT id, name FROM platforms WHERE is_active = 1 ORDER BY name;
-```
-
-### 6.8 按平台统计当天的总抓取次数
-
-```sql
-SELECT platform_id, COUNT(*) AS item_count, MAX(crawl_count) AS max_crawl_count
-FROM news_items
+SELECT source_type, source_id, source_name, COUNT(*) AS hit_count
+FROM filtered_items
 WHERE crawl_date = date('now', '+8 hours')
-GROUP BY platform_id
-ORDER BY item_count DESC;
+GROUP BY source_type, source_id, source_name
+ORDER BY source_type, hit_count DESC;
 ```
 
-### 6.9 标题搜索(模糊查询)
+### 6.7 标题搜索(模糊查询)
 
 ```sql
-SELECT crawl_date, platform_id, title, rank, url
-FROM news_items
+SELECT crawl_date, source_type, source_id, title, rank, url
+FROM filtered_items
 WHERE title LIKE '%AI%'
   AND crawl_date >= date('now', '+8 hours', '-7 days')
-ORDER BY crawl_date DESC, rank
+ORDER BY crawl_date DESC, source_type, rank
 LIMIT 50;
 ```
 
-### 6.10 获取所有表的列表(用于初始化校验)
+### 6.8 高相关度命中(AI 筛选模式)
+
+```sql
+SELECT crawl_date, source_type, source_name, title, url, relevance_score
+FROM filtered_items
+WHERE relevance_score >= 0.8
+  AND crawl_date >= date('now', '+8 hours', '-3 days')
+ORDER BY relevance_score DESC, crawl_date DESC
+LIMIT 30;
+```
+
+### 6.9 获取所有表的列表(用于初始化校验)
 
 ```sql
 SELECT name, type FROM sqlite_master WHERE type IN ('table', 'index') ORDER BY type, name;
@@ -489,25 +393,22 @@ SELECT name, type FROM sqlite_master WHERE type IN ('table', 'index') ORDER BY t
 
 | 情况 | 判定 |
 |---|---|
-| 同平台同日,url 相同 | ✅ 同一条(命中 url 索引) |
-| 同平台同日,url 都为空但 title 相同 | ✅ 同一条(命中 title 索引) |
-| 同平台同日,title 相同但 url 不同 | ✅ 被判定为同一条(命中 title 索引) |
-| 同平台同日,url 相同但 title 变了 | ⚠️ 可能冲突(取决于 ON CONFLICT 子句) |
-| 不同日期 url 完全相同 | ❌ 视为两条(`crawl_date` 不同) |
+| 同源同日同标题 | ✅ 同一条(命中 `idx_filtered_unique` 索引) |
+| 同源同日 url 相同但 title 不同 | ❌ 视为两条(以 title 为去重键) |
+| 同源同日 title 相同但 url 不同 | ✅ 同一条(url 会被新值覆盖) |
+| 不同日期同源同标题 | ❌ 视为两条(`crawl_date` 不同) |
 
 ### 7.2 幂等性保证
 
 爬虫重复运行不会导致数据重复:
 
-- `news_items` / `rss_items`:使用 `INSERT ... ON CONFLICT DO UPDATE`,重复执行只更新 `crawl_count`、`last_crawl_time`,不新增行
-- `rank_history`:每次抓取追加一行(设计意图,用于排名趋势分析)
-- `platforms` / `rss_feeds`:`INSERT OR IGNORE`,跨日共享同一行
-- `crawl_records`:按 `(crawl_date, crawl_time)` 去重,重复执行只更新 `total_items`
+- `filtered_items`:使用 `INSERT ... ON CONFLICT(source_id, crawl_date, title) DO UPDATE`,重复执行只更新 `rank`、`last_crawl_time`、`relevance_score` 等字段,不新增行
+- 同一日内多次抓取:排名取最新值,相关度评分取最大值,首末时间用 COALESCE 保留非空值
 
 ### 7.3 已知限制
 
-- **同平台同日 title 相同但 url 不同**会被合并为一条(实际场景罕见)
-- **url 相同但 title 被编辑修改**的情况可能无法正确更新 title
+- **同源同日 title 相同但 url 不同**会被合并为一条(url 字段更新为最新的非空值)
+- **url 相同但 title 被编辑修改**的情况会视为两条不同的记录
 
 如需更精确的去重逻辑,需要修改 [trendradar/storage/turso_sync.py](../trendradar/storage/turso_sync.py) 的 upsert SQL。
 
@@ -563,34 +464,19 @@ TrendRadar 爬虫写入的 `crawl_date` 是按配置的时区(默认 `Asia/Shang
 
 ### Q4: 数据量增长会超 Turso 免费额度吗?
 
-不会。Turso 免费版 9GB 总空间,按每月 50MB 增长估算,可用 180 个月。如需控制存储,可在 TrendRadar 配置 `storage.remote.retention_days` 自动清理历史数据(但目前 Turso 同步未实现自动清理,需手动 DELETE)。
+不会。Turso 免费版 9GB 总空间。简化设计后只存命中结果,每月增长 < 5MB,可用 1800+ 个月。如需控制存储,可定期手动 DELETE 历史数据(目前 Turso 同步未实现自动清理)。
 
 ### Q5: 我能直接写入 Turso 吗?
 
 **不建议**。Turso 库的写入端由 TrendRadar 爬虫独占,外部写入会破坏 upsert 逻辑。如果只是读取,完全没问题。
 
-### Q6: 如何获取某个时间点的榜单快照?
+### Q6: 为什么我看到的是单表 `filtered_items`,而不是多张表?
 
-```sql
--- 获取 12:25 抓取的快照
-SELECT title, platform_id, rank
-FROM news_items
-WHERE crawl_date = '2026-07-18'
-  AND first_crawl_time <= '12-25'
-  AND last_crawl_time >= '12-25'
-ORDER BY platform_id, rank;
-```
+从 v6.x 起,Turso 同步逻辑已简化:
+- **之前**:6 张表(`platforms` / `news_items` / `rank_history` / `crawl_records` / `rss_feeds` / `rss_items`),双写采集阶段全量数据
+- **现在**:1 张表 `filtered_items`,只存最终筛选出来的命中结果,热榜和 RSS 统一存储
 
-或用 `rank_history` 表:
-
-```sql
-SELECT rh.crawl_time, n.platform_id, n.title, rh.rank
-FROM rank_history rh
-JOIN news_items n ON n.id = rh.news_item_id
-WHERE rh.crawl_date = '2026-07-18'
-  AND rh.crawl_time = '12-25'
-ORDER BY n.platform_id, rh.rank;
-```
+如果你的应用依赖旧的 6 表结构,需要适配新的单表 schema。旧表如果存在于历史库中不会被自动删除,但 TrendRadar 不再写入它们。
 
 ### Q7: 如何在本地测试连接?
 
@@ -603,7 +489,7 @@ export TURSO_AUTH_TOKEN=<your-token>
 curl -X POST $TURSO_URL/v2/pipeline \
   -H "Authorization: Bearer $TURSO_AUTH_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"requests":[{"type":"execute","stmt":{"sql":"SELECT COUNT(*) FROM news_items"}},{"type":"close"}]}'
+  -d '{"requests":[{"type":"execute","stmt":{"sql":"SELECT COUNT(*) FROM filtered_items"}},{"type":"close"}]}'
 ```
 
 ### Q8: 响应里 `rows` 是数组的数组,如何转成字典?
@@ -637,6 +523,6 @@ def rows_to_dicts(response):
 
 ---
 
-**文档版本**:1.0
-**最后更新**:2026-07-18
-**对应 TrendRadar 版本**:v6.10.0+
+**文档版本**:2.0
+**最后更新**:2026-07-19
+**对应 TrendRadar 版本**:简化版 Turso 同步(单表 `filtered_items`)

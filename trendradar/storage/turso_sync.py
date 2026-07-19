@@ -2,14 +2,11 @@
 """
 Turso 同步模块（HTTP API 实现）
 
-在主存储流程保存数据后，将当天数据同步到 Turso (libSQL) 统一库，
-便于其他后端服务跨日查询（无需下载多个按日分库的 .db 文件）。
-
-设计原则：
+简化设计：只存储最终筛选出来的命中结果（热榜 + RSS 统一存储到单表 filtered_items）。
+- 不分热榜/RSS 表，通过 source_type 字段区分来源
+- 不再在采集阶段暂存或双写，仅在分析流水线完成后调用 sync_filtered_items
+- 幂等 upsert：基于 (source_id, crawl_date, title) 去重，重复抓取更新最新状态
 - 与主存储解耦：Turso 写入失败只打印日志，不影响爬虫主流程
-- 幂等 upsert：基于 (url, platform_id, crawl_date) / (guid, feed_id, crawl_date) 去重
-- 复用现有 NewsData / RSSData 数据模型，不依赖具体存储后端
-- 支持环境变量覆盖配置（用于 GitHub Actions Secrets 注入）
 - 纯 HTTP API 实现：使用 requests 调用 Turso v2 pipeline 接口
   无需 Rust/MSVC 编译，零额外依赖（项目已有 requests）
 """
@@ -20,106 +17,37 @@ from typing import Optional, Dict, List, Any, Tuple
 
 import requests
 
-from trendradar.storage.base import NewsData, RSSData
-
 
 # Turso 统一库的 schema 语句列表
 # 注意：Turso HTTP API 的 execute 不支持多条 SQL 拼接，必须逐条执行
 TURSO_SCHEMA_STATEMENTS = [
-    # 平台表（跨日共享，按 id upsert）
+    # 命中结果统一表（热榜 + RSS 共用）
     """
-    CREATE TABLE IF NOT EXISTS platforms (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        is_active INTEGER DEFAULT 1,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """,
-    # 新闻条目表（跨日累积，通过 url + platform_id + crawl_date 唯一去重）
-    """
-    CREATE TABLE IF NOT EXISTS news_items (
+    CREATE TABLE IF NOT EXISTS filtered_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
-        platform_id TEXT NOT NULL,
-        rank INTEGER NOT NULL,
         url TEXT DEFAULT '',
         mobile_url TEXT DEFAULT '',
-        first_crawl_time TEXT NOT NULL,
-        last_crawl_time TEXT NOT NULL,
-        crawl_count INTEGER DEFAULT 1,
+        source_id TEXT NOT NULL,
+        source_name TEXT DEFAULT '',
+        source_type TEXT NOT NULL DEFAULT 'hotlist',
+        rank INTEGER DEFAULT 0,
+        relevance_score REAL DEFAULT 0,
+        first_crawl_time TEXT,
+        last_crawl_time TEXT,
         crawl_date TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (platform_id) REFERENCES platforms(id)
-    )
-    """,
-    # 排名历史表
-    """
-    CREATE TABLE IF NOT EXISTS rank_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        news_item_id INTEGER NOT NULL,
-        rank INTEGER NOT NULL,
-        crawl_time TEXT NOT NULL,
-        crawl_date TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (news_item_id) REFERENCES news_items(id)
-    )
-    """,
-    # 抓取批次记录表（按 crawl_date + crawl_time 唯一）
-    """
-    CREATE TABLE IF NOT EXISTS crawl_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        crawl_date TEXT NOT NULL,
-        crawl_time TEXT NOT NULL,
-        total_items INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(crawl_date, crawl_time)
-    )
-    """,
-    # RSS 源表（跨日共享）
-    """
-    CREATE TABLE IF NOT EXISTS rss_feeds (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        is_active INTEGER DEFAULT 1,
+        crawl_time TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """,
-    # RSS 条目表（跨日累积，通过 url + feed_id + crawl_date 去重）
-    """
-    CREATE TABLE IF NOT EXISTS rss_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        feed_id TEXT NOT NULL,
-        url TEXT NOT NULL,
-        guid TEXT DEFAULT '',
-        published_at TEXT,
-        summary TEXT,
-        author TEXT,
-        first_crawl_time TEXT NOT NULL,
-        last_crawl_time TEXT NOT NULL,
-        crawl_count INTEGER DEFAULT 1,
-        crawl_date TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (feed_id) REFERENCES rss_feeds(id)
-    )
-    """,
-    # 索引
-    "CREATE INDEX IF NOT EXISTS idx_news_platform ON news_items(platform_id)",
-    "CREATE INDEX IF NOT EXISTS idx_news_crawl_date ON news_items(crawl_date)",
-    "CREATE INDEX IF NOT EXISTS idx_news_last_crawl ON news_items(last_crawl_time)",
-    "CREATE INDEX IF NOT EXISTS idx_news_title ON news_items(title)",
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_news_url_platform_date ON news_items(url, platform_id, crawl_date) WHERE url != ''",
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_platform_date ON news_items(title, platform_id, crawl_date)",
-    "CREATE INDEX IF NOT EXISTS idx_rank_history_news ON rank_history(news_item_id)",
-    "CREATE INDEX IF NOT EXISTS idx_rss_feed ON rss_items(feed_id)",
-    "CREATE INDEX IF NOT EXISTS idx_rss_crawl_date ON rss_items(crawl_date)",
-    "CREATE INDEX IF NOT EXISTS idx_rss_published ON rss_items(published_at DESC)",
-    "CREATE INDEX IF NOT EXISTS idx_rss_title ON rss_items(title)",
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_rss_url_feed_date ON rss_items(url, feed_id, crawl_date)",
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_rss_guid_feed_date ON rss_items(guid, feed_id, crawl_date) WHERE guid != ''",
+    # 同源同日同标题视为同一行（跨日累积时同标题会因 crawl_date 不同而各占一行）
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_filtered_unique ON filtered_items(source_id, crawl_date, title)",
+    "CREATE INDEX IF NOT EXISTS idx_filtered_crawl_date ON filtered_items(crawl_date)",
+    "CREATE INDEX IF NOT EXISTS idx_filtered_source ON filtered_items(source_id, source_type)",
+    "CREATE INDEX IF NOT EXISTS idx_filtered_last_crawl ON filtered_items(last_crawl_time)",
+    "CREATE INDEX IF NOT EXISTS idx_filtered_title_text ON filtered_items(title)",
+    "CREATE INDEX IF NOT EXISTS idx_filtered_url ON filtered_items(url) WHERE url != ''",
 ]
 
 
@@ -129,49 +57,29 @@ class TursoSyncService:
 
     用法：
         service = TursoSyncService(url="libsql://xxx.turso.io", auth_token="xxx")
-        service.sync_news_data(news_data)
-        service.sync_rss_data(rss_data)
+        service.sync_filtered_items(items)  # items 为命中数据字典列表
         service.cleanup()
 
     同步策略：
-    - 平台/RSS 源信息：INSERT OR IGNORE（首次写入后不再更新）
-    - 新闻/RSS 条目：基于唯一索引 ON CONFLICT DO UPDATE（upsert）
-    - 排名历史：每次抓取追加新行
+    - 只接收筛选后的命中数据（热榜 + RSS 统一存储到 filtered_items 表）
+    - 基于 (source_id, crawl_date, title) 唯一索引 upsert
+    - 重复抓取更新 rank / relevance_score / last_crawl_time 等字段
     - 批量提交：单次抓取的所有 SQL 在一个事务中执行，一次 HTTP 请求完成
     """
 
-    def __init__(
-        self,
-        url: str,
-        auth_token: str,
-        sync_news: bool = True,
-        sync_rss: bool = True,
-        sync_mode: str = "all",
-    ):
+    def __init__(self, url: str, auth_token: str):
         """
         初始化 Turso 同步服务
 
         Args:
             url: libSQL 连接 URL（libsql:// 或 https:// 均可）
             auth_token: Turso auth token
-            sync_news: 是否同步热榜数据
-            sync_rss: 是否同步 RSS 数据
-            sync_mode: 同步策略
-                - "all": 同步全部抓取到的数据（默认）
-                - "matched_only": 采集阶段暂存，等分析完成后只同步命中的数据
-                  需配合 flush_matched() 方法使用
         """
         self.url = self._normalize_url(url)
         self.auth_token = auth_token
-        self.sync_news_enabled = sync_news
-        self.sync_rss_enabled = sync_rss
-        self.sync_mode = sync_mode if sync_mode in ("all", "matched_only") else "all"
         self._session: Optional[requests.Session] = None
         self._enabled = True
         self._initialized = False
-        # matched_only 模式下的暂存区
-        self._pending_news: List[NewsData] = []
-        self._pending_rss: List[RSSData] = []
 
         if not url or not auth_token:
             print("[Turso 同步] 未配置 url 或 auth_token，同步功能禁用")
@@ -279,261 +187,89 @@ class TursoSyncService:
                 raise RuntimeError(f"Turso SQL 错误: {err_msg}")
         return data
 
-    def sync_news_data(self, data: NewsData) -> bool:
-        """同步热榜数据到 Turso"""
-        if not self._enabled or not self.sync_news_enabled:
-            return False
-        if not data or not data.items:
-            return True
-
-        # matched_only 模式：暂存到 pending，等分析完成后 flush
-        if self.sync_mode == "matched_only":
-            self._pending_news.append(data)
-            return True
-
-        crawl_date = data.date
-        crawl_time = data.crawl_time
-
-        try:
-            statements: List[Tuple[str, List[Any]]] = []
-
-            # 1. upsert 平台信息
-            for source_id in data.items.keys():
-                source_name = data.id_to_name.get(source_id, source_id)
-                statements.append((
-                    "INSERT OR IGNORE INTO platforms (id, name, is_active) VALUES (?, ?, 1)",
-                    [source_id, source_name],
-                ))
-
-            # 2. upsert 新闻条目（不追加 rank_history，单独查询 id）
-            for source_id, news_list in data.items.items():
-                for item in news_list:
-                    statements.append((
-                        """
-                        INSERT INTO news_items
-                            (title, platform_id, rank, url, mobile_url,
-                             first_crawl_time, last_crawl_time, crawl_count, crawl_date)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(title, platform_id, crawl_date) DO UPDATE SET
-                            rank = excluded.rank,
-                            url = COALESCE(NULLIF(excluded.url, ''), news_items.url),
-                            mobile_url = COALESCE(NULLIF(excluded.mobile_url, ''), news_items.mobile_url),
-                            last_crawl_time = excluded.last_crawl_time,
-                            crawl_count = news_items.crawl_count + 1,
-                            updated_at = CURRENT_TIMESTAMP
-                        """,
-                        [
-                            item.title,
-                            source_id,
-                            item.rank,
-                            item.url,
-                            item.mobile_url,
-                            item.first_time or crawl_time,
-                            item.last_time or crawl_time,
-                            item.count if item.count > 0 else 1,
-                            crawl_date,
-                        ],
-                    ))
-                    # 排名历史（无需回查 id，子查询获取，简化批量流程）
-                    statements.append((
-                        """
-                        INSERT INTO rank_history (news_item_id, rank, crawl_time, crawl_date)
-                        SELECT id, ?, ?, ? FROM news_items
-                        WHERE title = ? AND platform_id = ? AND crawl_date = ?
-                        """,
-                        [
-                            item.rank,
-                            crawl_time,
-                            crawl_date,
-                            item.title,
-                            source_id,
-                            crawl_date,
-                        ],
-                    ))
-
-            # 3. 记录本次抓取批次
-            total_items = sum(len(v) for v in data.items.values())
-            statements.append((
-                """
-                INSERT INTO crawl_records (crawl_date, crawl_time, total_items)
-                VALUES (?, ?, ?)
-                ON CONFLICT(crawl_date, crawl_time) DO UPDATE SET
-                    total_items = excluded.total_items
-                """,
-                [crawl_date, crawl_time, total_items],
-            ))
-
-            self._execute_batch(statements)
-            print(f"[Turso 同步] 已同步 {total_items} 条新闻到 Turso (date={crawl_date}, time={crawl_time})")
-            return True
-        except Exception as e:
-            print(f"[Turso 同步] 同步新闻数据失败: {e}")
-            return False
-
-    def sync_rss_data(self, data: RSSData) -> bool:
-        """同步 RSS 数据到 Turso"""
-        if not self._enabled or not self.sync_rss_enabled:
-            return False
-        if not data or not data.items:
-            return True
-
-        # matched_only 模式：暂存到 pending，等分析完成后 flush
-        if self.sync_mode == "matched_only":
-            self._pending_rss.append(data)
-            return True
-
-        crawl_date = data.date
-        crawl_time = data.crawl_time
-
-        try:
-            statements: List[Tuple[str, List[Any]]] = []
-
-            # 1. upsert RSS 源信息
-            for feed_id in data.items.keys():
-                feed_name = data.id_to_name.get(feed_id, feed_id)
-                statements.append((
-                    "INSERT OR IGNORE INTO rss_feeds (id, name, is_active) VALUES (?, ?, 1)",
-                    [feed_id, feed_name],
-                ))
-
-            # 2. upsert RSS 条目
-            total_items = 0
-            for feed_id, rss_list in data.items.items():
-                for item in rss_list:
-                    statements.append((
-                        """
-                        INSERT INTO rss_items
-                            (title, feed_id, url, guid, published_at, summary, author,
-                             first_crawl_time, last_crawl_time, crawl_count, crawl_date)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(url, feed_id, crawl_date) DO UPDATE SET
-                            title = excluded.title,
-                            guid = COALESCE(NULLIF(excluded.guid, ''), rss_items.guid),
-                            published_at = COALESCE(NULLIF(excluded.published_at, ''), rss_items.published_at),
-                            summary = COALESCE(NULLIF(excluded.summary, ''), rss_items.summary),
-                            author = COALESCE(NULLIF(excluded.author, ''), rss_items.author),
-                            last_crawl_time = excluded.last_crawl_time,
-                            crawl_count = rss_items.crawl_count + 1,
-                            updated_at = CURRENT_TIMESTAMP
-                        """,
-                        [
-                            item.title,
-                            feed_id,
-                            item.url,
-                            item.guid,
-                            item.published_at,
-                            item.summary,
-                            item.author,
-                            item.first_time or crawl_time,
-                            item.last_time or crawl_time,
-                            item.count if item.count > 0 else 1,
-                            crawl_date,
-                        ],
-                    ))
-                    total_items += 1
-
-            self._execute_batch(statements)
-            print(f"[Turso 同步] 已同步 {total_items} 条 RSS 到 Turso (date={crawl_date}, time={crawl_time})")
-            return True
-        except Exception as e:
-            print(f"[Turso 同步] 同步 RSS 数据失败: {e}")
-            return False
-
-    def flush_matched(
-        self,
-        matched_news_urls: Optional[set] = None,
-        matched_news_titles: Optional[set] = None,
-        matched_rss_urls: Optional[set] = None,
-    ) -> None:
+    def sync_filtered_items(self, items: List[Dict[str, Any]]) -> bool:
         """
-        在 matched_only 模式下，把暂存中命中的数据同步到 Turso，然后清空暂存。
-
-        匹配规则（命中任一即视为命中）：
-        - 新闻：item.url 在 matched_news_urls 中（url 为空时，item.title 在 matched_news_titles 中）
-        - RSS：item.url 在 matched_rss_urls 中
-
-        如果传入空集合或 None，则不同步任何数据（清空暂存）。
+        同步筛选后的命中条目到 Turso（热榜 + RSS 统一入口）
 
         Args:
-            matched_news_urls: 命中的新闻 URL 集合
-            matched_news_titles: 命中的新闻标题集合（用于 url 为空时的兜底匹配）
-            matched_rss_urls: 命中的 RSS URL 集合
+            items: 命中数据字典列表，每个字典应包含以下字段（缺失用默认值）：
+                - title (str, 必填)
+                - url (str, 可空)
+                - mobile_url (str, 可空)
+                - source_id (str, 必填)
+                - source_name (str, 可空)
+                - source_type (str, 'hotlist' 或 'rss', 默认 'hotlist')
+                - rank (int, 默认 0)
+                - relevance_score (float, 默认 0)
+                - first_time (str, 可空)
+                - last_time (str, 可空)
+                - crawl_date (str, 必填, YYYY-MM-DD)
+                - crawl_time (str, 可空, HH:MM)
+
+        Returns:
+            True 表示成功（或无数据），False 表示失败
         """
         if not self._enabled:
-            return
-        if self.sync_mode != "matched_only":
-            return  # 非 matched_only 模式不处理
+            return False
+        if not items:
+            return True
 
-        matched_news_urls = matched_news_urls or set()
-        matched_news_titles = matched_news_titles or set()
-        matched_rss_urls = matched_rss_urls or set()
+        try:
+            statements: List[Tuple[str, List[Any]]] = []
+            for item in items:
+                title = item.get("title", "")
+                if not title:
+                    continue
+                source_id = item.get("source_id", "")
+                if not source_id:
+                    continue
+                crawl_date = item.get("crawl_date", "")
+                if not crawl_date:
+                    continue
 
-        # 筛选命中的新闻数据，重建 NewsData
-        from trendradar.storage.base import NewsData, RSSData
+                statements.append((
+                    """
+                    INSERT INTO filtered_items
+                        (title, url, mobile_url, source_id, source_name, source_type,
+                         rank, relevance_score, first_crawl_time, last_crawl_time,
+                         crawl_date, crawl_time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(source_id, crawl_date, title) DO UPDATE SET
+                        url = COALESCE(NULLIF(excluded.url, ''), filtered_items.url),
+                        mobile_url = COALESCE(NULLIF(excluded.mobile_url, ''), filtered_items.mobile_url),
+                        source_name = COALESCE(NULLIF(excluded.source_name, ''), filtered_items.source_name),
+                        rank = excluded.rank,
+                        relevance_score = MAX(excluded.relevance_score, filtered_items.relevance_score),
+                        first_crawl_time = COALESCE(NULLIF(filtered_items.first_crawl_time, ''), excluded.first_crawl_time),
+                        last_crawl_time = COALESCE(NULLIF(excluded.last_crawl_time, ''), filtered_items.last_crawl_time),
+                        crawl_time = COALESCE(NULLIF(excluded.crawl_time, ''), filtered_items.crawl_time),
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    [
+                        title,
+                        item.get("url", "") or "",
+                        item.get("mobile_url", "") or "",
+                        source_id,
+                        item.get("source_name", "") or "",
+                        item.get("source_type", "hotlist") or "hotlist",
+                        item.get("rank", 0) or 0,
+                        item.get("relevance_score", 0) or 0,
+                        item.get("first_time", "") or "",
+                        item.get("last_time", "") or "",
+                        crawl_date,
+                        item.get("crawl_time", "") or "",
+                    ],
+                ))
 
-        matched_news_count = 0
-        for pending_data in self._pending_news:
-            matched_items = {}  # source_id -> List[NewsItem]
-            for source_id, items in pending_data.items.items():
-                hit_items = [
-                    item for item in items
-                    if (item.url and item.url in matched_news_urls)
-                    or (not item.url and item.title in matched_news_titles)
-                ]
-                if hit_items:
-                    matched_items[source_id] = hit_items
-                    matched_news_count += len(hit_items)
+            if not statements:
+                return True
 
-            if matched_items:
-                # 临时切换 sync_mode 避免 sync_news_data 再次暂存
-                matched_data = NewsData(
-                    items=matched_items,
-                    id_to_name=pending_data.id_to_name,
-                    date=pending_data.date,
-                    crawl_time=pending_data.crawl_time,
-                )
-                old_mode = self.sync_mode
-                self.sync_mode = "all"
-                try:
-                    self.sync_news_data(matched_data)
-                finally:
-                    self.sync_mode = old_mode
-
-        # 筛选命中的 RSS 数据
-        matched_rss_count = 0
-        for pending_data in self._pending_rss:
-            matched_items = {}  # feed_id -> List[RSSItem]
-            for feed_id, items in pending_data.items.items():
-                hit_items = [
-                    item for item in items
-                    if item.url and item.url in matched_rss_urls
-                ]
-                if hit_items:
-                    matched_items[feed_id] = hit_items
-                    matched_rss_count += len(hit_items)
-
-            if matched_items:
-                matched_data = RSSData(
-                    items=matched_items,
-                    id_to_name=pending_data.id_to_name,
-                    date=pending_data.date,
-                    crawl_time=pending_data.crawl_time,
-                )
-                old_mode = self.sync_mode
-                self.sync_mode = "all"
-                try:
-                    self.sync_rss_data(matched_data)
-                finally:
-                    self.sync_mode = old_mode
-
-        print(
-            f"[Turso 同步] matched_only 模式 flush 完成: "
-            f"命中新闻 {matched_news_count} 条, RSS {matched_rss_count} 条"
-        )
-
-        # 清空暂存
-        self._pending_news.clear()
-        self._pending_rss.clear()
+            self._execute_batch(statements)
+            print(f"[Turso 同步] 已同步 {len(statements)} 条命中条目到 Turso")
+            return True
+        except Exception as e:
+            print(f"[Turso 同步] 同步命中数据失败: {e}")
+            return False
 
     def cleanup(self) -> None:
         """清理资源"""
@@ -559,7 +295,7 @@ def create_turso_service_from_config(
     优先级：配置文件字段 > 环境变量
 
     Args:
-        turso_config: 配置字典，包含 enabled / url / auth_token / sync_news / sync_rss
+        turso_config: 配置字典，包含 enabled / url / auth_token
 
     Returns:
         TursoSyncService 实例，未启用或配置缺失时返回 None
@@ -585,10 +321,4 @@ def create_turso_service_from_config(
         print("[Turso 同步] 已启用但未配置 url 或 auth_token，跳过初始化")
         return None
 
-    return TursoSyncService(
-        url=url,
-        auth_token=auth_token,
-        sync_news=turso_config.get("sync_news", True),
-        sync_rss=turso_config.get("sync_rss", True),
-        sync_mode=turso_config.get("sync_mode", "all"),
-    )
+    return TursoSyncService(url=url, auth_token=auth_token)

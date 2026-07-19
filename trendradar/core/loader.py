@@ -358,6 +358,7 @@ def _load_storage_config(config_data: Dict) -> Dict:
     local = storage.get("local", {})
     remote = storage.get("remote", {})
     pull = storage.get("pull", {})
+    turso = storage.get("turso", {})
 
     txt_enabled_env = _get_env_bool("STORAGE_TXT_ENABLED")
     html_enabled_env = _get_env_bool("STORAGE_HTML_ENABLED")
@@ -388,6 +389,11 @@ def _load_storage_config(config_data: Dict) -> Dict:
         "PULL": {
             "ENABLED": pull_enabled_env if pull_enabled_env is not None else pull.get("enabled", False),
             "DAYS": pull_days_env if pull_days_env is not None else pull.get("days", 7),
+        },
+        "TURSO": {
+            "ENABLED": turso.get("enabled", False),
+            "URL": turso.get("url", ""),
+            "AUTH_TOKEN": turso.get("auth_token", ""),
         },
     }
 
