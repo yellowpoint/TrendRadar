@@ -37,12 +37,16 @@ TURSO_SCHEMA_STATEMENTS = [
         last_crawl_time TEXT,
         crawl_date TEXT NOT NULL,
         crawl_time TEXT,
+        dedup_key TEXT NOT NULL DEFAULT '',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """,
-    # 同源同日同标题视为同一行（跨日累积时同标题会因 crawl_date 不同而各占一行）
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_filtered_unique ON filtered_items(source_id, crawl_date, title)",
+    # 去重索引：dedup_key 由调用方计算
+    #   - URL 非空（RSS / 带链接热榜）: dedup_key = url  → 跨日同文 upsert 到同一行
+    #   - URL 为空（无链接热榜）:        dedup_key = "crawl_date|title" → 同日同文 upsert 到同一行
+    # 这样 RSS 源站修改标题后再次抓取不会产生重复行
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_filtered_unique ON filtered_items(source_id, dedup_key)",
     "CREATE INDEX IF NOT EXISTS idx_filtered_crawl_date ON filtered_items(crawl_date)",
     "CREATE INDEX IF NOT EXISTS idx_filtered_source ON filtered_items(source_id, source_type)",
     "CREATE INDEX IF NOT EXISTS idx_filtered_last_crawl ON filtered_items(last_crawl_time)",
@@ -129,20 +133,93 @@ class TursoSyncService:
 
         # 单独执行 ALTER TABLE ADD COLUMN，列已存在时容错跳过
         # libSQL 不支持 ALTER TABLE ADD COLUMN IF NOT EXISTS
+        for col_sql in (
+            "ALTER TABLE filtered_items ADD COLUMN published_at TEXT",
+            "ALTER TABLE filtered_items ADD COLUMN dedup_key TEXT NOT NULL DEFAULT ''",
+        ):
+            try:
+                self._post({
+                    "requests": [
+                        {"type": "execute", "stmt": {"sql": col_sql}},
+                        {"type": "close"},
+                    ]
+                })
+            except Exception as e:
+                err_str = str(e)
+                # 列已存在属于预期情况，不视为错误
+                if "duplicate column" in err_str.lower() or "already exists" in err_str.lower():
+                    pass
+                else:
+                    print(f"[Turso 同步] 添加列失败 ({col_sql}): {e}")
+
+        # 从旧 schema (source_id, crawl_date, title) 迁移到新 schema (source_id, dedup_key)
+        # 步骤：回填 dedup_key → 删除重复行 → 重建唯一索引
+        self._migrate_dedup_key()
+
+    def _migrate_dedup_key(self) -> None:
+        """从旧去重键 (source_id, crawl_date, title) 迁移到新去重键 (source_id, dedup_key)
+
+        幂等：dedup_key 已回填/索引已重建时直接跳过。
+        """
         try:
+            # 1. 回填 dedup_key：URL 非空用 URL，否则用 "crawl_date|title"
             self._post({
                 "requests": [
-                    {"type": "execute", "stmt": {"sql": "ALTER TABLE filtered_items ADD COLUMN published_at TEXT"}},
+                    {"type": "execute", "stmt": {"sql":
+                        "UPDATE filtered_items SET dedup_key = url "
+                        "WHERE (dedup_key IS NULL OR dedup_key = '') AND url != ''"
+                    }},
+                    {"type": "execute", "stmt": {"sql":
+                        "UPDATE filtered_items SET dedup_key = crawl_date || '|' || title "
+                        "WHERE (dedup_key IS NULL OR dedup_key = '') AND (url = '' OR url IS NULL)"
+                    }},
                     {"type": "close"},
                 ]
             })
         except Exception as e:
-            err_str = str(e)
-            # 列已存在属于预期情况，不视为错误
-            if "duplicate column" in err_str.lower() or "already exists" in err_str.lower():
-                pass
-            else:
-                print(f"[Turso 同步] 添加 published_at 列失败: {e}")
+            print(f"[Turso 同步] 回填 dedup_key 失败: {e}")
+            # 不 raise，后续索引重建可能仍能成功
+
+        # 2. 删除重复行：同一 (source_id, dedup_key) 保留 relevance_score 最高（平局取最新 id）
+        #    只在旧索引仍存在时执行（迁移标志）
+        try:
+            self._post({
+                "requests": [
+                    {"type": "execute", "stmt": {"sql":
+                        "DELETE FROM filtered_items WHERE id NOT IN ("
+                        "  SELECT id FROM ("
+                        "    SELECT id, ROW_NUMBER() OVER ("
+                        "      PARTITION BY source_id, dedup_key "
+                        "      ORDER BY relevance_score DESC, id DESC"
+                        "    ) AS rn FROM filtered_items"
+                        "    WHERE dedup_key != ''"
+                        "  ) WHERE rn = 1"
+                        ")"
+                    }},
+                    {"type": "close"},
+                ]
+            })
+        except Exception as e:
+            print(f"[Turso 同步] 删除重复行失败: {e}")
+
+        # 3. 重建唯一索引：先删旧的 (source_id, crawl_date, title)，再确保新的存在
+        try:
+            self._post({
+                "requests": [
+                    {"type": "execute", "stmt": {"sql":
+                        "DROP INDEX IF EXISTS idx_filtered_unique"
+                    }},
+                    {"type": "execute", "stmt": {"sql":
+                        "CREATE UNIQUE INDEX IF NOT EXISTS idx_filtered_unique "
+                        "ON filtered_items(source_id, dedup_key)"
+                    }},
+                    {"type": "close"},
+                ]
+            })
+        except Exception as e:
+            # 仍有重复时索引创建会失败，提示用户手动清理
+            print(f"[Turso 同步] 重建唯一索引失败（可能仍有重复行）: {e}")
+            print("[Turso 同步] 请运行清理脚本: python -m trendradar.storage.turso_sync --cleanup")
 
     @staticmethod
     def _convert_arg(value: Any) -> Dict[str, Any]:
@@ -268,14 +345,19 @@ class TursoSyncService:
                 if not crawl_date:
                     continue
 
+                url = item.get("url", "") or ""
+                # 去重键：URL 非空用 URL（跨日同文 upsert 到同一行），否则用 "crawl_date|title"
+                dedup_key = url if url else f"{crawl_date}|{title}"
+
                 statements.append((
                     """
                     INSERT INTO filtered_items
                         (title, url, mobile_url, source_id, source_name, source_type,
                          rank, relevance_score, first_crawl_time, last_crawl_time,
-                         crawl_date, crawl_time, published_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(source_id, crawl_date, title) DO UPDATE SET
+                         crawl_date, crawl_time, published_at, dedup_key)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(source_id, dedup_key) DO UPDATE SET
+                        title = excluded.title,
                         url = COALESCE(NULLIF(excluded.url, ''), filtered_items.url),
                         mobile_url = COALESCE(NULLIF(excluded.mobile_url, ''), filtered_items.mobile_url),
                         source_name = COALESCE(NULLIF(excluded.source_name, ''), filtered_items.source_name),
@@ -283,13 +365,14 @@ class TursoSyncService:
                         relevance_score = MAX(excluded.relevance_score, filtered_items.relevance_score),
                         first_crawl_time = COALESCE(NULLIF(filtered_items.first_crawl_time, ''), excluded.first_crawl_time),
                         last_crawl_time = COALESCE(NULLIF(excluded.last_crawl_time, ''), filtered_items.last_crawl_time),
+                        crawl_date = excluded.crawl_date,
                         crawl_time = COALESCE(NULLIF(excluded.crawl_time, ''), filtered_items.crawl_time),
                         published_at = COALESCE(NULLIF(excluded.published_at, ''), filtered_items.published_at),
                         updated_at = CURRENT_TIMESTAMP
                     """,
                     [
                         title,
-                        item.get("url", "") or "",
+                        url,
                         item.get("mobile_url", "") or "",
                         source_id,
                         item.get("source_name", "") or "",
@@ -301,6 +384,7 @@ class TursoSyncService:
                         crawl_date,
                         item.get("crawl_time", "") or "",
                         item.get("published_at", "") or item.get("first_time", "") or "",
+                        dedup_key,
                     ],
                 ))
 
@@ -327,6 +411,121 @@ class TursoSyncService:
     def enabled(self) -> bool:
         """是否启用"""
         return self._enabled and self._initialized
+
+    # ============================================================
+    # 查询/清理辅助方法（供 CLI 和第三方使用）
+    # ============================================================
+
+    def _execute_read(self, sql: str) -> List[Dict[str, Any]]:
+        """执行只读查询，返回行列表（每行为 {列名: 值}）"""
+        payload = {
+            "requests": [
+                {"type": "execute", "stmt": {"sql": sql}},
+                {"type": "close"},
+            ]
+        }
+        data = self._post(payload)
+        results = data.get("results", [])
+        if not results:
+            return []
+        first = results[0]
+        if first.get("type") != "ok":
+            return []
+        result_obj = first.get("response", {}).get("result", {})
+        rows_resp = result_obj.get("rows", [])
+        cols_resp = result_obj.get("cols", [])
+        col_names = [c.get("name", f"col{i}") for i, c in enumerate(cols_resp)]
+
+        out: List[Dict[str, Any]] = []
+        for row in rows_resp:
+            # row 是 cell 列表，如 [{"type":"integer","value":"30"}, ...]
+            record: Dict[str, Any] = {}
+            for i, val in enumerate(row):
+                v = val.get("value") if isinstance(val, dict) else val
+                record[col_names[i] if i < len(col_names) else f"col{i}"] = v
+            out.append(record)
+        return out
+
+    def get_stats(self) -> Dict[str, Any]:
+        """获取 filtered_items 表的统计信息（总行数、重复行数、去重键空值数）"""
+        try:
+            total_row = self._execute_read("SELECT COUNT(*) AS cnt FROM filtered_items")
+            total = total_row[0].get("cnt", 0) if total_row else 0
+
+            # 重复行数：同一 (source_id, dedup_key) 出现 >1 次的额外行数
+            dup_row = self._execute_read(
+                "SELECT COALESCE(SUM(c - 1), 0) AS cnt FROM ("
+                "  SELECT source_id, dedup_key, COUNT(*) AS c "
+                "  FROM filtered_items "
+                "  WHERE dedup_key != '' "
+                "  GROUP BY source_id, dedup_key HAVING COUNT(*) > 1"
+                ")"
+            )
+            duplicates = dup_row[0].get("cnt", 0) if dup_row else 0
+
+            empty_key_row = self._execute_read(
+                "SELECT COUNT(*) AS cnt FROM filtered_items WHERE dedup_key IS NULL OR dedup_key = ''"
+            )
+            empty_keys = empty_key_row[0].get("cnt", 0) if empty_key_row else 0
+
+            return {
+                "total_rows": total,
+                "duplicate_rows": duplicates,
+                "empty_dedup_keys": empty_keys,
+            }
+        except Exception as e:
+            print(f"[Turso 同步] 获取统计信息失败: {e}")
+            return {"total_rows": -1, "duplicate_rows": -1, "empty_dedup_keys": -1, "error": str(e)}
+
+    def show_duplicates(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """展示当前重复行（同一 source_id+dedup_key 下的所有行），用于排查"""
+        try:
+            return self._execute_read(
+                "SELECT id, source_id, source_name, title, url, crawl_date, "
+                "relevance_score, dedup_key, created_at "
+                "FROM filtered_items "
+                "WHERE (source_id, dedup_key) IN ("
+                "  SELECT source_id, dedup_key FROM filtered_items "
+                "  WHERE dedup_key != '' "
+                "  GROUP BY source_id, dedup_key HAVING COUNT(*) > 1"
+                ") "
+                f"ORDER BY source_id, dedup_key, id LIMIT {int(limit)}"
+            )
+        except Exception as e:
+            print(f"[Turso 同步] 查询重复行失败: {e}")
+            return []
+
+    def force_cleanup_duplicates(self) -> Dict[str, int]:
+        """强制清理重复行（保留 relevance_score 最高、平局取最新 id 的一行）
+
+        Returns:
+            {"deleted": 删除行数, "remaining": 剩余行数}
+        """
+        before = self.get_stats()
+        try:
+            self._post({
+                "requests": [
+                    {"type": "execute", "stmt": {"sql":
+                        "DELETE FROM filtered_items WHERE id NOT IN ("
+                        "  SELECT id FROM ("
+                        "    SELECT id, ROW_NUMBER() OVER ("
+                        "      PARTITION BY source_id, dedup_key "
+                        "      ORDER BY relevance_score DESC, id DESC"
+                        "    ) AS rn FROM filtered_items"
+                        "    WHERE dedup_key != ''"
+                        "  ) WHERE rn = 1"
+                        ") AND dedup_key != ''"
+                    }},
+                    {"type": "close"},
+                ]
+            })
+        except Exception as e:
+            print(f"[Turso 同步] 强制清理失败: {e}")
+            return {"deleted": 0, "remaining": before.get("total_rows", 0), "error": str(e)}
+
+        after = self.get_stats()
+        deleted = before.get("total_rows", 0) - after.get("total_rows", 0)
+        return {"deleted": deleted, "remaining": after.get("total_rows", 0)}
 
 
 def create_turso_service_from_config(
@@ -365,3 +564,88 @@ def create_turso_service_from_config(
         return None
 
     return TursoSyncService(url=url, auth_token=auth_token)
+
+
+def _create_service_from_env() -> Optional[TursoSyncService]:
+    """从环境变量直接创建 Turso 服务（用于 CLI）"""
+    url = os.environ.get("TURSO_URL", "")
+    auth_token = os.environ.get("TURSO_AUTH_TOKEN", "")
+    if not url or not auth_token:
+        print("[Turso 同步] 未设置 TURSO_URL / TURSO_AUTH_TOKEN 环境变量")
+        return None
+    return TursoSyncService(url=url, auth_token=auth_token)
+
+
+def _cli_main() -> int:
+    """CLI 入口：python -m trendradar.storage.turso_sync [--status|--duplicates|--cleanup]"""
+    import sys
+
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "--status"
+
+    service = _create_service_from_env()
+    if not service or not service.enabled:
+        print("[Turso 同步] 服务未启用，退出")
+        return 1
+
+    try:
+        if cmd in ("--status", "-s"):
+            stats = service.get_stats()
+            print("=" * 60)
+            print("Turso filtered_items 表统计")
+            print("=" * 60)
+            print(f"  总行数:        {stats.get('total_rows', -1)}")
+            print(f"  重复行数:      {stats.get('duplicate_rows', -1)}")
+            print(f"  空 dedup_key:  {stats.get('empty_dedup_keys', -1)}")
+            if "error" in stats:
+                print(f"  错误: {stats['error']}")
+            print("=" * 60)
+
+        elif cmd in ("--duplicates", "-d"):
+            limit = 50
+            if len(sys.argv) > 2:
+                try:
+                    limit = int(sys.argv[2])
+                except ValueError:
+                    pass
+            rows = service.show_duplicates(limit=limit)
+            if not rows:
+                print("✅ 没有发现重复行")
+            else:
+                print(f"发现 {len(rows)} 行重复（limit={limit}）：")
+                print("-" * 100)
+                for r in rows:
+                    print(f"  id={r.get('id')} | {r.get('source_name', '')} | "
+                          f"crawl_date={r.get('crawl_date', '')} | "
+                          f"score={r.get('relevance_score', '')}")
+                    print(f"    标题: {r.get('title', '')}")
+                    print(f"    URL:  {r.get('url', '')}")
+                    print(f"    key:  {r.get('dedup_key', '')}")
+                    print()
+
+        elif cmd in ("--cleanup", "-c"):
+            print("清理前统计：")
+            before = service.get_stats()
+            print(f"  总行数: {before.get('total_rows', -1)}, 重复行数: {before.get('duplicate_rows', -1)}")
+            print()
+            print("执行强制清理...")
+            result = service.force_cleanup_duplicates()
+            print()
+            print(f"✅ 清理完成: 删除 {result.get('deleted', 0)} 行，剩余 {result.get('remaining', 0)} 行")
+            if "error" in result:
+                print(f"⚠️ 错误: {result['error']}")
+
+        else:
+            print(f"未知命令: {cmd}")
+            print("用法: python -m trendradar.storage.turso_sync [--status|--duplicates|--cleanup]")
+            print("  --status, -s           显示统计信息（默认）")
+            print("  --duplicates, -d [N]   显示前 N 行重复（默认 50）")
+            print("  --cleanup, -c          强制清理重复行")
+            return 2
+
+        return 0
+    finally:
+        service.cleanup()
+
+
+if __name__ == "__main__":
+    raise SystemExit(_cli_main())
