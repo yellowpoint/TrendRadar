@@ -22,6 +22,11 @@ import requests
 # 注意：Turso HTTP API 的 execute 不支持多条 SQL 拼接，必须逐条执行
 TURSO_SCHEMA_STATEMENTS = [
     # 命中结果统一表（热榜 + RSS 共用）
+    # 重要：dedup_key 必须使用表级 UNIQUE constraint 而非 CREATE UNIQUE INDEX。
+    #   libSQL (Turso) 严格遵循 SQLite 标准：ON CONFLICT(col1, col2) 只能匹配
+    #   PRIMARY KEY 或 CREATE TABLE 中声明的 UNIQUE constraint，
+    #   不接受 CREATE UNIQUE INDEX 创建的索引作为 ON CONFLICT 目标。
+    #   标准 SQLite 实现较宽松，接受 UNIQUE INDEX（这就是本地能跑通、Turso 报错的原因）。
     """
     CREATE TABLE IF NOT EXISTS filtered_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,14 +44,14 @@ TURSO_SCHEMA_STATEMENTS = [
         crawl_time TEXT,
         dedup_key TEXT NOT NULL DEFAULT '',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(source_id, dedup_key)
     )
     """,
-    # 去重索引：dedup_key 由调用方计算
+    # dedup_key 去重语义说明（由调用方计算）：
     #   - URL 非空（RSS / 带链接热榜）: dedup_key = url  → 跨日同文 upsert 到同一行
     #   - URL 为空（无链接热榜）:        dedup_key = "crawl_date|title" → 同日同文 upsert 到同一行
     # 这样 RSS 源站修改标题后再次抓取不会产生重复行
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_filtered_unique ON filtered_items(source_id, dedup_key)",
     "CREATE INDEX IF NOT EXISTS idx_filtered_crawl_date ON filtered_items(crawl_date)",
     "CREATE INDEX IF NOT EXISTS idx_filtered_source ON filtered_items(source_id, source_type)",
     "CREATE INDEX IF NOT EXISTS idx_filtered_last_crawl ON filtered_items(last_crawl_time)",
@@ -152,17 +157,59 @@ class TursoSyncService:
                 else:
                     print(f"[Turso 同步] 添加列失败 ({col_sql}): {e}")
 
-        # 从旧 schema (source_id, crawl_date, title) 迁移到新 schema (source_id, dedup_key)
-        # 步骤：回填 dedup_key → 删除重复行 → 重建唯一索引
-        self._migrate_dedup_key()
+        # 迁移到表级 UNIQUE constraint（libSQL 要求 ON CONFLICT 必须匹配表级约束）
+        self._migrate_to_unique_constraint()
 
-    def _migrate_dedup_key(self) -> None:
-        """从旧去重键 (source_id, crawl_date, title) 迁移到新去重键 (source_id, dedup_key)
+    def _migrate_to_unique_constraint(self) -> None:
+        """把 (source_id, dedup_key) 从旧 UNIQUE INDEX 迁移到表级 UNIQUE constraint
 
-        幂等：dedup_key 已回填/索引已重建时直接跳过。
+        原因：libSQL (Turso) 严格遵循 SQLite 标准 —— ON CONFLICT(col1, col2) 只能匹配
+        PRIMARY KEY 或 CREATE TABLE 中声明的 UNIQUE constraint，不接受 CREATE UNIQUE INDEX。
+        旧 schema 用 CREATE UNIQUE INDEX 创建去重索引，导致 ON CONFLICT 在 Turso 上失败。
+        本地表级迁移：CREATE TABLE 新表(带 UNIQUE) → INSERT 去重数据 → DROP 旧表 → RENAME。
+
+        幂等：表已有 UNIQUE(source_id, dedup_key) constraint 时直接跳过。
         """
+        # 1. 检查表是否已存在 UNIQUE(source_id, dedup_key) constraint
         try:
-            # 1. 回填 dedup_key：URL 非空用 URL，否则用 "crawl_date|title"
+            rows = self._execute_read(
+                "SELECT sql AS create_sql FROM sqlite_master "
+                "WHERE type='table' AND name='filtered_items'"
+            )
+        except Exception as e:
+            print(f"[Turso 同步] 读取表 schema 失败: {e}")
+            return
+
+        if not rows:
+            return  # 表不存在，CREATE TABLE IF NOT EXISTS 会处理
+
+        create_sql = rows[0].get("create_sql", "") or ""
+        # 标准化比较：去空格/换行/大小写
+        sql_normalized = (
+            create_sql.lower().replace(" ", "").replace("\n", "").replace("\t", "")
+        )
+        already_has_constraint = "unique(source_id,dedup_key)" in sql_normalized
+
+        # 清理可能的旧 UNIQUE INDEX（已迁移过的表上遗留的同名索引，作为冗余删除）
+        try:
+            self._post({
+                "requests": [
+                    {"type": "execute", "stmt": {"sql":
+                        "DROP INDEX IF EXISTS idx_filtered_unique"
+                    }},
+                    {"type": "close"},
+                ]
+            })
+        except Exception:
+            pass
+
+        if already_has_constraint:
+            return  # 已有表级 constraint，无需迁移
+
+        print("[Turso 同步] 迁移 filtered_items：UNIQUE INDEX → 表级 UNIQUE constraint")
+
+        # 2. 在旧表上回填 dedup_key（确保所有行有非空 dedup_key）
+        try:
             self._post({
                 "requests": [
                     {"type": "execute", "stmt": {"sql":
@@ -178,47 +225,104 @@ class TursoSyncService:
             })
         except Exception as e:
             print(f"[Turso 同步] 回填 dedup_key 失败: {e}")
-            # 不 raise，后续索引重建可能仍能成功
 
-        # 2. 删除重复行：同一 (source_id, dedup_key) 保留 relevance_score 最高（平局取最新 id）
-        #    只在旧索引仍存在时执行（迁移标志）
+        # 3. 重建表：创建临时新表 → 复制去重数据 → DROP 旧表 → RENAME → 重建索引
+        #    在一个事务中执行，失败回滚
         try:
             self._post({
                 "requests": [
+                    {"type": "execute", "stmt": {"sql": "BEGIN"}},
+                    # 临时新表（带 UNIQUE constraint）
+                    {"type": "execute", "stmt": {"sql": """
+                        CREATE TABLE filtered_items_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            title TEXT NOT NULL,
+                            url TEXT DEFAULT '',
+                            mobile_url TEXT DEFAULT '',
+                            source_id TEXT NOT NULL,
+                            source_name TEXT DEFAULT '',
+                            source_type TEXT NOT NULL DEFAULT 'hotlist',
+                            rank INTEGER DEFAULT 0,
+                            relevance_score REAL DEFAULT 0,
+                            first_crawl_time TEXT,
+                            last_crawl_time TEXT,
+                            crawl_date TEXT NOT NULL,
+                            crawl_time TEXT,
+                            dedup_key TEXT NOT NULL DEFAULT '',
+                            published_at TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(source_id, dedup_key)
+                        )
+                    """}},
+                    # 复制数据：按 (source_id, dedup_key) 去重，保留 relevance_score 最高（平局取最新 id）
+                    {"type": "execute", "stmt": {"sql": """
+                        INSERT INTO filtered_items_new (
+                            title, url, mobile_url, source_id, source_name, source_type,
+                            rank, relevance_score, first_crawl_time, last_crawl_time,
+                            crawl_date, crawl_time, dedup_key, published_at, created_at, updated_at
+                        )
+                        SELECT
+                            title, url, mobile_url, source_id, source_name, source_type,
+                            rank, relevance_score, first_crawl_time, last_crawl_time,
+                            crawl_date, crawl_time, dedup_key, published_at, created_at, updated_at
+                        FROM (
+                            SELECT *, ROW_NUMBER() OVER (
+                                PARTITION BY source_id, dedup_key
+                                ORDER BY relevance_score DESC, id DESC
+                            ) AS rn
+                            FROM filtered_items
+                            WHERE dedup_key != ''
+                        ) WHERE rn = 1
+                    """}},
+                    # 替换表
+                    {"type": "execute", "stmt": {"sql": "DROP TABLE filtered_items"}},
                     {"type": "execute", "stmt": {"sql":
-                        "DELETE FROM filtered_items WHERE id NOT IN ("
-                        "  SELECT id FROM ("
-                        "    SELECT id, ROW_NUMBER() OVER ("
-                        "      PARTITION BY source_id, dedup_key "
-                        "      ORDER BY relevance_score DESC, id DESC"
-                        "    ) AS rn FROM filtered_items"
-                        "    WHERE dedup_key != ''"
-                        "  ) WHERE rn = 1"
-                        ")"
+                        "ALTER TABLE filtered_items_new RENAME TO filtered_items"
                     }},
+                    # 重建普通索引（DROP TABLE 会一并删除）
+                    {"type": "execute", "stmt": {"sql":
+                        "CREATE INDEX IF NOT EXISTS idx_filtered_crawl_date ON filtered_items(crawl_date)"
+                    }},
+                    {"type": "execute", "stmt": {"sql":
+                        "CREATE INDEX IF NOT EXISTS idx_filtered_source ON filtered_items(source_id, source_type)"
+                    }},
+                    {"type": "execute", "stmt": {"sql":
+                        "CREATE INDEX IF NOT EXISTS idx_filtered_last_crawl ON filtered_items(last_crawl_time)"
+                    }},
+                    {"type": "execute", "stmt": {"sql":
+                        "CREATE INDEX IF NOT EXISTS idx_filtered_title_text ON filtered_items(title)"
+                    }},
+                    {"type": "execute", "stmt": {"sql":
+                        "CREATE INDEX IF NOT EXISTS idx_filtered_url ON filtered_items(url) WHERE url != ''"
+                    }},
+                    {"type": "execute", "stmt": {"sql": "COMMIT"}},
                     {"type": "close"},
                 ]
             })
+            print("[Turso 同步] 表迁移完成：已添加 UNIQUE(source_id, dedup_key) constraint")
         except Exception as e:
-            print(f"[Turso 同步] 删除重复行失败: {e}")
-
-        # 3. 重建唯一索引：先删旧的 (source_id, crawl_date, title)，再确保新的存在
-        try:
-            self._post({
-                "requests": [
-                    {"type": "execute", "stmt": {"sql":
-                        "DROP INDEX IF EXISTS idx_filtered_unique"
-                    }},
-                    {"type": "execute", "stmt": {"sql":
-                        "CREATE UNIQUE INDEX IF NOT EXISTS idx_filtered_unique "
-                        "ON filtered_items(source_id, dedup_key)"
-                    }},
-                    {"type": "close"},
-                ]
-            })
-        except Exception as e:
-            # 仍有重复时索引创建会失败，提示用户手动清理
-            print(f"[Turso 同步] 重建唯一索引失败（可能仍有重复行）: {e}")
+            # 回滚事务（best effort）
+            try:
+                self._post({
+                    "requests": [
+                        {"type": "execute", "stmt": {"sql": "ROLLBACK"}},
+                        {"type": "close"},
+                    ]
+                })
+            except Exception:
+                pass
+            # 清理可能残留的临时表
+            try:
+                self._post({
+                    "requests": [
+                        {"type": "execute", "stmt": {"sql": "DROP TABLE IF EXISTS filtered_items_new"}},
+                        {"type": "close"},
+                    ]
+                })
+            except Exception:
+                pass
+            print(f"[Turso 同步] 表迁移失败: {e}")
             print("[Turso 同步] 请运行清理脚本: python -m trendradar.storage.turso_sync --cleanup")
 
     @staticmethod
