@@ -406,6 +406,36 @@
                 color: #7c3aed;
             }
 
+            .news-summary {
+                display: flex;
+                gap: 10px;
+                align-items: flex-start;
+                margin-top: 8px;
+            }
+
+            .news-cover {
+                flex-shrink: 0;
+                width: 80px;
+                height: 60px;
+                border-radius: 6px;
+                object-fit: cover;
+                background: #e5e7eb;
+            }
+
+            .news-summary-text {
+                flex: 1;
+                min-width: 0;
+                font-size: 12px;
+                color: #6b7280;
+                line-height: 1.5;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            body.dark-mode .news-summary-text { color: #9ca3af; }
+
             /* 通用区域分割线样式 */
             .section-divider {
                 margin-top: 32px;
@@ -695,6 +725,26 @@
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
+            }
+
+            .rss-item-body {
+                display: flex;
+                gap: 10px;
+                align-items: flex-start;
+            }
+
+            .rss-cover {
+                flex-shrink: 0;
+                width: 80px;
+                height: 60px;
+                border-radius: 6px;
+                object-fit: cover;
+                background: #e5e7eb;
+            }
+
+            .rss-text {
+                flex: 1;
+                min-width: 0;
             }
 
             /* 独立展示区样式 - 复用热点词汇统计区样式 */
@@ -1383,7 +1433,7 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label">生成时间</span>
-                        <span class="info-value">07-21 15:44</span>
+                        <span class="info-value">07-23 12:27</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">热榜命中</span>
@@ -1391,7 +1441,7 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label">RSS 命中</span>
-                        <span class="info-value">1 / 2</span>
+                        <span class="info-value">18 / 77</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">热榜平台</span>
@@ -1403,7 +1453,7 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label">新增热点</span>
-                        <span class="info-value">0 + 1</span>
+                        <span class="info-value">0 + 18</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">AI 分析</span>
@@ -1419,18 +1469,216 @@
                 <div class="rss-section">
                     <div class="rss-section-header">
                         <div class="rss-section-title">RSS 新增更新</div>
-                        <div class="rss-section-count">1 条</div>
+                        <div class="rss-section-count">18 条</div>
                     </div>
                     <div class="rss-feeds-grid">
                     <div class="feed-group">
                         <div class="feed-header">
-                            <div class="feed-name">机器人公司动态</div>
+                            <div class="feed-name">人形机器人</div>
                             <div class="feed-count">1 条</div>
                         </div>
                         <div class="rss-item">
                             <div class="rss-meta"><span class="rss-time">07-21 15:31</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
                             </div>
-                            <div class="rss-title"><a href="https://zhidx.com/p/578181.html" target="_blank" class="rss-link">机器人“一捏”辨真伪花生，一目科技WAIC秀AI视触觉黑科技</a>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a5f1f243ee7a_6a5f1f243c19e_6a5f1f243c16a_微信图片_20260719120221_13_853.jpg/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578181.html" target="_blank" class="rss-link">机器人“一捏”辨真伪花生，一目科技WAIC秀AI视触觉黑科技</a>
+                                    </div><p class="rss-summary">智东西 作者 | ZeR0 编辑 | 漠影 智东西7月21日报道，在世界人工智能大会WAIC 2026期间，视触觉技术创企一目科技演示了让机器人分辨两颗看起来几乎一模一样的花生，两颗花生的颜色、形状、纹理都很像，只见机器人伸出指尖，轻轻按压了一下，随即做出判断：左边是真的，右边是模型。 做到这一点，得益于一目科技的视触觉（Vision-based Tactile）技术。 机器人面对的是物理世界，需要持续获得来自现实世界的Ground Truth（物理真值）。通过触觉感知，机器人可掌握物体在受力后的形变与响应。 在很长一段时间里，机器人并没有学会这件事。它们能看到物体的样子，却感受不到物体的硬度、摩擦力与弹性。这是因为传统的力传感器无法直接感知“形变”。 与传统力传感器不同，视触觉在柔性材料内部建立光学观测系统。当机器人与物体发生接触时，材料会产生微米级的形变，内置的光学系统实时记录这些变化的图像，再通过AI算法还原出压力分布、剪切力、纹理、滑移趋势等丰富的物理信息。 除了真假花生识别外，一目科技还展示了五指集成视触觉灵巧手。在演示屏幕上，观众可清晰看到，机械手抓取过程中，每根手指的压力...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feed-group">
+                        <div class="feed-header">
+                            <div class="feed-name">端侧AI芯片</div>
+                            <div class="feed-count">7 条</div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-21 19:35</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a5f59fe1735a_6a5f59fe144a1_6a5f59fe14472_1112.jpg/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578293.html" target="_blank" class="rss-link">WAIC现场直击：端侧算力竞赛爆发，聆思手握下一代AI终端落地关键筹码</a>
+                                    </div><p class="rss-summary">智东西 作者 | 程茜 编辑 | 漠影 智东西7月21日报道，刚刚落幕的世界人工智能大会（WAIC 2026）上，掀起了一场终端智能硬件的集中爆发浪潮。 纵观整场大会，行业赛道最直观的转向清晰可见：AI赛道的焦点正在从扎堆云端超算集群、以参数规模和云端算力论高下，向手机、AI PC、人形机器人、智能座舱、全屋中控等泛终端硬件转移。 AI的落地形态也随之革新。它不再局限于网页、App里的静态对话窗口，而是开始进入具备感知、理解、交互和执行能力的真实设备，与物理世界连接得更紧密。 交互场景的变化，也决定了未来智能硬件的底层逻辑：它们不只是硬件终端，更会成为搭载本地AI能力的算力载体。 这也把产业竞争的关键分水岭，推向了更底层的位置——能否在低功耗、小型化、低成本约束下，实现高效、稳定、可规模化的大模型本地推理；能否搭建可适配多类终端场景的芯片平台。 虽然终端形态千变万化，但底层算力芯片是统一刚需。因此，具备端侧AI推理芯片自研能力、并能把芯片真正导入终端产品的厂商，才更有机会拿到这一轮端侧AI爆发的入场券。 透过这次WAIC集中爆发的端侧AI浪潮可以明确，未来AI产业发展的核心，正在从云端...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 19:54</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78141" target="_blank" class="rss-link">地平线、大众深化合作：押注AI基座大模型，L3/L4落地时间表定了</a>
+                                    </div><p class="rss-summary">中国企业与国外车企合作的又一范例。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-20 19:40</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/cover4-1.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672593?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">苹果国行 AI 刷屏之外，三星也把端侧大脑交给国产 AI</a>
+                                    </div><p class="rss-summary">把智能装进手机的秘诀，在于「多、快、好、省」#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-21 20:26</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a5f5a071ff2d_6a5f5a071d2a3_6a5f5a071d275_公众号文章信息来源与写作风格分析-9.png/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578313.html" target="_blank" class="rss-link">谷歌被曝要把Gemini“写进”芯片？推理能效最高提升10倍</a>
+                                    </div><p class="rss-summary">智东西 编译 | 茄子 编辑 | 程茜 智东西7月21日消息，昨日，The Information援引知情人士消息报道，谷歌正在研发一款面向Gemini模型的新型AI服务器芯片Frozen v2。该芯片计划将Gemini模型部分架构直接集成到芯片中，通过减少运行过程中的计算决策和数据搬运，提升AI推理效率。 知情人士透露，谷歌工程师预估，按照单位功耗能够输出的Token数量计算，Frozen v2的效率可能达到谷歌最新自研AI芯片的6至10倍。 这款芯片在谷歌内部被非正式地称为“Frozen v2”。知情人士称，谷歌希望借此缓解严重的AI算力短缺问题。算力紧张已经在谷歌内部引发矛盾，还迫使谷歌云拒绝部分外部客户的订单。 知情人士还透露，谷歌最快可能于2028年部署这款芯片，但该公司目前仍在确定Frozen v2的主要功能、各部分的协同方式，以及究竟要将多少模型信息固化在芯片中。 The Information还提到，Frozen v2并非谷歌首次探索模型专用芯片。此前，谷歌DeepMind首席科学家杰夫·迪恩（Jeff Dean）曾计划将模型权重直接固化到芯片中，但由于该方案的芯片只能...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-21 17:52</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/cover5.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672648?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">1500 元的 Codex 键盘卖断货，这小哥反手自己造了一台</a>
+                                    </div><p class="rss-summary">一起缺货的还有 ChatGPT 篮球#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 15:06</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/cover5-1.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672746?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">AI 圈今天最大的瓜：GPT-6 越狱攻击，被 GLM 5.2 揪出了</a>
+                                    </div><p class="rss-summary">「GPT-6」为了考试作弊，黑进了别人的服务器#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 09:43</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/335-2.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672647?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">刚刚，Gemini 3.6 Flash 正式发布，但网友笑得更大声了</a>
+                                    </div><p class="rss-summary">说好的 3.5 Pro 呢？#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feed-group">
+                        <div class="feed-header">
+                            <div class="feed-name">智能戒指手表</div>
+                            <div class="feed-count">1 条</div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 14:16</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78137" target="_blank" class="rss-link">睡不好的3亿人，和一枚正在解题的AI智能戒指</a>
+                                    </div><p class="rss-summary">让科技融入生活。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feed-group">
+                        <div class="feed-header">
+                            <div class="feed-name">机器人公司动态</div>
+                            <div class="feed-count">5 条</div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-23 02:50</span><span class="rss-author">TechCrunch</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://techcrunch.com/2026/07/22/travis-kalanicks-robotics-company-raises-1-7b-led-by-a16z/" target="_blank" class="rss-link">Travis Kalanick’s robotics company raises $1.7B, led by a16z</a>
+                                    </div><p class="rss-summary">Uber is also investing in Travis Kalanick&#x27;s company Atoms, which has made gauzy claims about using industrial AI to modernize the world.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-21 11:55</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a5ede2e05d79_6a5ede2e030bf_6a5ede2e03095_头图.jpg/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/577675.html" target="_blank" class="rss-link">Matrix-Game 3.5WAIC首发！开源世界模型一哥，这次要“造世界”不只是“拍视频”</a>
+                                    </div><p class="rss-summary">智东西 作者 | 王涵 编辑 | 漠影 要说过去一年AI领域讨论最热的方向，世界模型必须占有一席之地。 在过去18个月里，世界模型企业吸纳了超过100亿美元的投资，图灵奖得主杨立昆（Yann LeCun）甚至预言三到五年内它将取代大语言模型成为主流AI范式。 与此同时，世界模型的技术瓶颈正在暴露。 长期记忆能力薄弱、相机控制精度不足、实时交互能力有限，多数产品停留在“生成视频”而非“交互世界”的阶段。更重要的是，市面上的世界模型普遍缺乏对物理规则的理解，例如模型能生成一条狗跑动的画面，却不明白狗的四条腿为什么按这个顺序落地。 就在这种混乱中，昆仑万维旗下Skywork团队在7月19日世界人工智能大会WAIC 2026期间，正式发布了世界模型Matrix-Game 3.5。 该模型能够根据用户动作和事件指令持续生成可交互的世界，并在长时序生成过程中保持场景结构、空间布局、角色身份和动态内容的一致性，为游戏、机器人、具身智能和 XR 等应用提供可持续交互的生成基础。 一、三方面升级，实现端到端实时推理 3.5版本从模型吞吐优化、DiT推理优化和VAE解码优化三个层面构建了完整的系统级加速方...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-20 18:29</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/3-3-1.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672547?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">世界杯冠军刚出炉，我让商汤 U1 Pro 做了一份全景赛况图</a>
+                                    </div><p class="rss-summary">所有图片都是 one shot#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 20:35</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78147" target="_blank" class="rss-link">到店体验新款理想L6：内饰全景屏变化巨大，但取消仪表盘是败笔</a>
+                                    </div><p class="rss-summary">理想要摆脱「奶爸车」标签。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 20:06</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78145" target="_blank" class="rss-link">29.98万起！北京越野泰钽700预售：华为智驾加持，硬派豪华新解法</a>
+                                    </div><p class="rss-summary">硬派豪华也卷起来了。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feed-group">
+                        <div class="feed-header">
+                            <div class="feed-name">展会新品发布</div>
+                            <div class="feed-count">4 条</div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 16:02</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a606fd127b8b_6a606fd124dec_6a606fd124d9a_截屏2026-07-22-00.15.37.png/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578602.html" target="_blank" class="rss-link">燧原科技在WAIC展出高性能超节点，六大优势提升部署效率</a>
+                                    </div><p class="rss-summary">智东西 作者 | ZeR0 编辑 | 漠影 智东西7月23日报道，世界人工智能大会WAIC 2026期间，国内云端AI芯片企业燧原科技参展并举办以“构建协同创新的Token经济芯生态”为主题的论坛，集中展示其在AI算力基础设施建设和产业应用等方面的系统级创新成果，呈现国产AI算力从技术突破迈向规模化应用的发展图景。 成立8年来，燧原科技自研迭代了四代架构5款云端AI芯片，构建了覆盖AI芯片、AI加速卡及模组、智算系统及集群和AI计算及编程软件平台的完整产品体系。 随着大模型训练和推理规模持续迈向万卡时代，超节点正成为支撑高性能AI算力基础设施的关键系统架构。在展会上，燧原科技重点展出基于自研加速模组打造的高性能超节点，包括： 基于先进正交架构方案的“云燧ESL64-O”。 基于成熟Cable-tray方案的“云燧ESL64-C”，可满足万卡级以上大规模集群组网需求。 云燧OGX标准化AI系统产品，为训练和推理场景提供灵活、高性价比的算力部署方案。 自研基于NPO技术的光互连原型系统方案，探索新一代智算网络互连技术。 依托自研加速模组，燧原科技持续推进高性能超节点系统创新，满足大模型训练...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 14:33</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78132" target="_blank" class="rss-link">影石和腾讯也出了一款个人AI录音设备，比AI录音卡更好？</a>
+                                    </div><p class="rss-summary">AI、软件、硬件都要抓，都要硬。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 11:45</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a60343a99a03_6a60343a96af5_6a60343a96ac3_智东西头条头图模板-带阴影版.png/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578481.html" target="_blank" class="rss-link">WAIC 2026落幕，海康威视首秀留下三个信号</a>
+                                    </div><p class="rss-summary">智东西 作者 | 李水青 编辑 | 漠影 2026年盛夏，上海世博展览馆内人流如织，世界人工智能大会（WAIC）的展台间涌动着技术变革的热浪。 在这场全球AI的顶级盛会中，诞生了诸多“首次”，而最引人注目的变化之一，便是AIoT巨头海康威视的首次深度亮相，将其已有的上千款大模型产品以精华提炼的方式呈现在展台上。 大模型真正进入产业，到底需要什么样的能力？海康威视试图给出一个来自物理世界的答案。其以“观澜大模型”为核心，构建了一个横跨云边端、覆盖软硬件的庞大智能物联体系。 走进海康展台，最吸引人群的是一系列正在真实场景中工作的AI产品。 在多模态智能摄像机体验区，观众无需编写复杂规则，只需要一句自然语言指令，摄像机便可以理解需求，对现场画面进行分析；在智慧体育体验区，观众跳绳、立定跳远，系统能够实时识别动作并完成评分；在安全生产展示区，大模型正在尝试理解复杂工业环境中的人员、设备、行为和空间关系。 这些体验背后展示的，是一套已经进入物理世界运行的智能系统。 当大模型开始大步迈向物理世界，我们需要什么样新的产业标准？当“多模态”从大模型发展的分支变为核心基础设施，全球首屈一指的物联感知巨头...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 14:27</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78124" target="_blank" class="rss-link">雷科技WAIC报道团凯旋！主流AI认证最强，AI硬科技超全集锦来了</a>
+                                    </div><p class="rss-summary">WAIC报道哪家强？Gemini们权威认证雷科技。</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1439,18 +1687,216 @@
                 <div class="section-divider rss-section">
                     <div class="rss-section-header">
                         <div class="rss-section-title">RSS 订阅更新</div>
-                        <div class="rss-section-count">1 条</div>
+                        <div class="rss-section-count">18 条</div>
                     </div>
                     <div class="rss-feeds-grid">
                     <div class="feed-group">
                         <div class="feed-header">
-                            <div class="feed-name">机器人公司动态</div>
+                            <div class="feed-name">人形机器人</div>
                             <div class="feed-count">1 条</div>
                         </div>
                         <div class="rss-item">
                             <div class="rss-meta"><span class="rss-time">07-21 15:31</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
                             </div>
-                            <div class="rss-title"><a href="https://zhidx.com/p/578181.html" target="_blank" class="rss-link">机器人“一捏”辨真假花生，一目科技在WAIC展示AI视触觉黑科技</a>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a5f1f243ee7a_6a5f1f243c19e_6a5f1f243c16a_微信图片_20260719120221_13_853.jpg/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578181.html" target="_blank" class="rss-link">机器人“一捏”辨真伪花生，一目科技在WAIC展示AI视触觉黑科技</a>
+                                    </div><p class="rss-summary">智东西 作者 | ZeR0 编辑 | 漠影 智东西7月21日报道，在世界人工智能大会WAIC 2026期间，视触觉技术创企一目科技演示了让机器人分辨两颗看起来几乎一模一样的花生，两颗花生的颜色、形状、纹理都很像，只见机器人伸出指尖，轻轻按压了一下，随即做出判断：左边是真的，右边是模型。 做到这一点，得益于一目科技的视触觉（Vision-based Tactile）技术。 机器人面对的是物理世界，需要持续获得来自现实世界的Ground Truth（物理真值）。通过触觉感知，机器人可掌握物体在受力后的形变与响应。 在很长一段时间里，机器人并没有学会这件事。它们能看到物体的样子，却感受不到物体的硬度、摩擦力与弹性。这是因为传统的力传感器无法直接感知“形变”。 与传统力传感器不同，视触觉在柔性材料内部建立光学观测系统。当机器人与物体发生接触时，材料会产生微米级的形变，内置的光学系统实时记录这些变化的图像，再通过AI算法还原出压力分布、剪切力、纹理、滑移趋势等丰富的物理信息。 除了真假花生识别外，一目科技还展示了五指集成视触觉灵巧手。在演示屏幕上，观众可清晰看到，机械手抓取过程中，每根手指的压力...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feed-group">
+                        <div class="feed-header">
+                            <div class="feed-name">端侧AI芯片</div>
+                            <div class="feed-count">7 条</div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-21 19:35</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a5f59fe1735a_6a5f59fe144a1_6a5f59fe14472_1112.jpg/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578293.html" target="_blank" class="rss-link">WAIC现场直击：端侧算力竞赛爆发，聆思手握下一代AI终端落地关键筹码</a>
+                                    </div><p class="rss-summary">智东西 作者 | 程茜 编辑 | 漠影 智东西7月21日报道，刚刚落幕的世界人工智能大会（WAIC 2026）上，掀起了一场终端智能硬件的集中爆发浪潮。 纵观整场大会，行业赛道最直观的转向清晰可见：AI赛道的焦点正在从扎堆云端超算集群、以参数规模和云端算力论高下，向手机、AI PC、人形机器人、智能座舱、全屋中控等泛终端硬件转移。 AI的落地形态也随之革新。它不再局限于网页、App里的静态对话窗口，而是开始进入具备感知、理解、交互和执行能力的真实设备，与物理世界连接得更紧密。 交互场景的变化，也决定了未来智能硬件的底层逻辑：它们不只是硬件终端，更会成为搭载本地AI能力的算力载体。 这也把产业竞争的关键分水岭，推向了更底层的位置——能否在低功耗、小型化、低成本约束下，实现高效、稳定、可规模化的大模型本地推理；能否搭建可适配多类终端场景的芯片平台。 虽然终端形态千变万化，但底层算力芯片是统一刚需。因此，具备端侧AI推理芯片自研能力、并能把芯片真正导入终端产品的厂商，才更有机会拿到这一轮端侧AI爆发的入场券。 透过这次WAIC集中爆发的端侧AI浪潮可以明确，未来AI产业发展的核心，正在从云端...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 19:54</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78141" target="_blank" class="rss-link">地平线与大众深化合作：押注AI基座大模型，L3/L4级自动驾驶落地时间表已定</a>
+                                    </div><p class="rss-summary">中国企业与国外车企合作的又一范例。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-20 19:40</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/cover4-1.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672593?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">苹果国行版AI刷屏之外，三星也将端侧智能大脑交给国产AI</a>
+                                    </div><p class="rss-summary">将智能装进手机的秘诀在于「多、快、好、省」#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-21 20:26</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a5f5a071ff2d_6a5f5a071d2a3_6a5f5a071d275_公众号文章信息来源与写作风格分析-9.png/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578313.html" target="_blank" class="rss-link">谷歌被曝要将Gemini“写入”芯片？推理能效最高提升10倍</a>
+                                    </div><p class="rss-summary">智东西 编译 | 茄子 编辑 | 程茜 智东西7月21日消息，昨日，The Information援引知情人士消息报道，谷歌正在研发一款面向Gemini模型的新型AI服务器芯片Frozen v2。该芯片计划将Gemini模型部分架构直接集成到芯片中，通过减少运行过程中的计算决策和数据搬运，提升AI推理效率。 知情人士透露，谷歌工程师预估，按照单位功耗能够输出的Token数量计算，Frozen v2的效率可能达到谷歌最新自研AI芯片的6至10倍。 这款芯片在谷歌内部被非正式地称为“Frozen v2”。知情人士称，谷歌希望借此缓解严重的AI算力短缺问题。算力紧张已经在谷歌内部引发矛盾，还迫使谷歌云拒绝部分外部客户的订单。 知情人士还透露，谷歌最快可能于2028年部署这款芯片，但该公司目前仍在确定Frozen v2的主要功能、各部分的协同方式，以及究竟要将多少模型信息固化在芯片中。 The Information还提到，Frozen v2并非谷歌首次探索模型专用芯片。此前，谷歌DeepMind首席科学家杰夫·迪恩（Jeff Dean）曾计划将模型权重直接固化到芯片中，但由于该方案的芯片只能...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-21 17:52</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/cover5.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672648?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">售价1500元的Codex键盘卖断货，这位小哥干脆自己动手造了一台</a>
+                                    </div><p class="rss-summary">缺货的不仅有Codex键盘，还有ChatGPT篮球#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 15:06</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/cover5-1.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672746?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">AI圈今日最大热点：GLM 5.2揪出GPT-6的越狱攻击</a>
+                                    </div><p class="rss-summary">“GPT-6”为考试作弊黑入他人服务器#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 09:43</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/335-2.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672647?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">Gemini 3.6 Flash刚刚正式发布，但网友们的反应更大声了</a>
+                                    </div><p class="rss-summary">说好的一起3.5 Pro呢？#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feed-group">
+                        <div class="feed-header">
+                            <div class="feed-name">智能戒指手表</div>
+                            <div class="feed-count">1 条</div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 14:16</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78137" target="_blank" class="rss-link">3亿睡眠不佳的人群，和一枚正在解题的AI智能戒指</a>
+                                    </div><p class="rss-summary">让科技融入生活。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feed-group">
+                        <div class="feed-header">
+                            <div class="feed-name">机器人公司动态</div>
+                            <div class="feed-count">5 条</div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-23 02:50</span><span class="rss-author">TechCrunch</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://techcrunch.com/2026/07/22/travis-kalanicks-robotics-company-raises-1-7b-led-by-a16z/" target="_blank" class="rss-link">Travis Kalanick的机器人公司获17亿美元融资，a16z领投</a>
+                                    </div><p class="rss-summary">Uber也在投资Travis Kalanick的公司Atoms，该公司曾模糊地宣称利用工业AI来改造世界。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-21 11:55</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a5ede2e05d79_6a5ede2e030bf_6a5ede2e03095_头图.jpg/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/577675.html" target="_blank" class="rss-link">Matrix-Game 3.5在WAIC首发！开源世界模型领军者，此次旨在“构建世界”而不止于“生成视频”</a>
+                                    </div><p class="rss-summary">智东西 作者 | 王涵 编辑 | 漠影 要说过去一年AI领域讨论最热的方向，世界模型必须占有一席之地。 在过去18个月里，世界模型企业吸纳了超过100亿美元的投资，图灵奖得主杨立昆（Yann LeCun）甚至预言三到五年内它将取代大语言模型成为主流AI范式。 与此同时，世界模型的技术瓶颈正在暴露。 长期记忆能力薄弱、相机控制精度不足、实时交互能力有限，多数产品停留在“生成视频”而非“交互世界”的阶段。更重要的是，市面上的世界模型普遍缺乏对物理规则的理解，例如模型能生成一条狗跑动的画面，却不明白狗的四条腿为什么按这个顺序落地。 就在这种混乱中，昆仑万维旗下Skywork团队在7月19日世界人工智能大会WAIC 2026期间，正式发布了世界模型Matrix-Game 3.5。 该模型能够根据用户动作和事件指令持续生成可交互的世界，并在长时序生成过程中保持场景结构、空间布局、角色身份和动态内容的一致性，为游戏、机器人、具身智能和 XR 等应用提供可持续交互的生成基础。 一、三方面升级，实现端到端实时推理 3.5版本从模型吞吐优化、DiT推理优化和VAE解码优化三个层面构建了完整的系统级加速方...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-20 18:29</span><span class="rss-author">爱范儿</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://s3.ifanr.com/wp-content/uploads/2026/07/3-3-1.png" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://www.ifanr.com/1672547?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=" target="_blank" class="rss-link">世界杯冠军刚出炉，我让商汤 U1 Pro 制作了一份全景赛事图集</a>
+                                    </div><p class="rss-summary">所有图片均为单张输入生成（one-shot）#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 20:35</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78147" target="_blank" class="rss-link">到店体验新款理想L6：内饰全景屏变化巨大，但取消仪表盘实属败笔</a>
+                                    </div><p class="rss-summary">理想要摆脱“奶爸车”的标签。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 20:06</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78145" target="_blank" class="rss-link">起售价29.98万元！北京越野泰钽700开启预售：华为智驾加持，重新定义硬派豪华</a>
+                                    </div><p class="rss-summary">硬派豪华市场也卷起来了。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feed-group">
+                        <div class="feed-header">
+                            <div class="feed-name">展会新品发布</div>
+                            <div class="feed-count">4 条</div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 16:02</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a606fd127b8b_6a606fd124dec_6a606fd124d9a_截屏2026-07-22-00.15.37.png/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578602.html" target="_blank" class="rss-link">燧原科技在WAIC展出高性能超节点，六大优势提升部署效率</a>
+                                    </div><p class="rss-summary">智东西 作者 | ZeR0 编辑 | 漠影 智东西7月23日报道，世界人工智能大会WAIC 2026期间，国内云端AI芯片企业燧原科技参展并举办以“构建协同创新的Token经济芯生态”为主题的论坛，集中展示其在AI算力基础设施建设和产业应用等方面的系统级创新成果，呈现国产AI算力从技术突破迈向规模化应用的发展图景。 成立8年来，燧原科技自研迭代了四代架构5款云端AI芯片，构建了覆盖AI芯片、AI加速卡及模组、智算系统及集群和AI计算及编程软件平台的完整产品体系。 随着大模型训练和推理规模持续迈向万卡时代，超节点正成为支撑高性能AI算力基础设施的关键系统架构。在展会上，燧原科技重点展出基于自研加速模组打造的高性能超节点，包括： 基于先进正交架构方案的“云燧ESL64-O”。 基于成熟Cable-tray方案的“云燧ESL64-C”，可满足万卡级以上大规模集群组网需求。 云燧OGX标准化AI系统产品，为训练和推理场景提供灵活、高性价比的算力部署方案。 自研基于NPO技术的光互连原型系统方案，探索新一代智算网络互连技术。 依托自研加速模组，燧原科技持续推进高性能超节点系统创新，满足大模型训练...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 14:33</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78132" target="_blank" class="rss-link">影石和腾讯也推出了一款个人AI录音设备，比AI录音卡更好吗？</a>
+                                    </div><p class="rss-summary">AI、软件和硬件都要抓，而且都要做得过硬。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 11:45</span><span class="rss-author">智东西</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body"><img class="rss-cover" src="https://oss.zhidx.com/uploads/2026/07/6a60343a99a03_6a60343a96af5_6a60343a96ac3_智东西头条头图模板-带阴影版.png/_zdx" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="https://zhidx.com/p/578481.html" target="_blank" class="rss-link">WAIC 2026落幕，海康威视首秀释放三大信号</a>
+                                    </div><p class="rss-summary">智东西 作者 | 李水青 编辑 | 漠影 2026年盛夏，上海世博展览馆内人流如织，世界人工智能大会（WAIC）的展台间涌动着技术变革的热浪。 在这场全球AI的顶级盛会中，诞生了诸多“首次”，而最引人注目的变化之一，便是AIoT巨头海康威视的首次深度亮相，将其已有的上千款大模型产品以精华提炼的方式呈现在展台上。 大模型真正进入产业，到底需要什么样的能力？海康威视试图给出一个来自物理世界的答案。其以“观澜大模型”为核心，构建了一个横跨云边端、覆盖软硬件的庞大智能物联体系。 走进海康展台，最吸引人群的是一系列正在真实场景中工作的AI产品。 在多模态智能摄像机体验区，观众无需编写复杂规则，只需要一句自然语言指令，摄像机便可以理解需求，对现场画面进行分析；在智慧体育体验区，观众跳绳、立定跳远，系统能够实时识别动作并完成评分；在安全生产展示区，大模型正在尝试理解复杂工业环境中的人员、设备、行为和空间关系。 这些体验背后展示的，是一套已经进入物理世界运行的智能系统。 当大模型开始大步迈向物理世界，我们需要什么样新的产业标准？当“多模态”从大模型发展的分支变为核心基础设施，全球首屈一指的物联感知巨头...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rss-item">
+                            <div class="rss-meta"><span class="rss-time">07-22 14:27</span><span class="rss-author">雷科技</span><span class="rss-author" style="color: #dc2626;">NEW</span>
+                            </div>
+                            <div class="rss-item-body">
+                                <div class="rss-text">
+                                    <div class="rss-title"><a href="http://www.leikeji.com/article/78124" target="_blank" class="rss-link">雷科技WAIC报道团凯旋！主流AI认证实力最强，AI硬核科技大全集来了</a>
+                                    </div><p class="rss-summary">WAIC报道哪家强？Gemini们权威认证雷科技。</p>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -102,7 +102,7 @@ class SQLiteStorageMixin:
         conn.commit()
 
     def _migrate_rss_schema(self, conn: sqlite3.Connection) -> None:
-        """迁移 rss_items 表结构（为已有数据库添加 guid 列）"""
+        """迁移 rss_items 表结构（为已有数据库添加 guid / cover_url 列）"""
         cursor = conn.execute("PRAGMA table_info(rss_items)")
         columns = {row[1] for row in cursor.fetchall()}
         if "guid" not in columns:
@@ -111,6 +111,8 @@ class SQLiteStorageMixin:
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_rss_guid_feed
                 ON rss_items(guid, feed_id) WHERE guid != ''
             """)
+        if "cover_url" not in columns:
+            conn.execute("ALTER TABLE rss_items ADD COLUMN cover_url TEXT DEFAULT ''")
 
     # ========================================
     # 新闻数据存储
@@ -882,6 +884,7 @@ class SQLiteStorageMixin:
                                     published_at = ?,
                                     summary = ?,
                                     author = ?,
+                                    cover_url = CASE WHEN ? != '' THEN ? ELSE cover_url END,
                                     last_crawl_time = ?,
                                     crawl_count = crawl_count + 1,
                                     updated_at = ?
@@ -890,18 +893,20 @@ class SQLiteStorageMixin:
                                   item.url, item.url,
                                   item_guid, item_guid,
                                   item.published_at, item.summary,
-                                  item.author, data.crawl_time, now_str, existing_id))
+                                  item.author,
+                                  item.cover_url, item.cover_url,
+                                  data.crawl_time, now_str, existing_id))
                             updated_count += 1
                         elif item.url or item_guid:
                             try:
                                 cursor.execute("""
                                     INSERT INTO rss_items
-                                    (title, feed_id, url, guid, published_at, summary, author,
+                                    (title, feed_id, url, guid, published_at, summary, author, cover_url,
                                      first_crawl_time, last_crawl_time, crawl_count,
                                      created_at, updated_at)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
                                 """, (item.title, feed_id, item.url, item_guid,
-                                      item.published_at, item.summary, item.author,
+                                      item.published_at, item.summary, item.author, item.cover_url,
                                       data.crawl_time, data.crawl_time, now_str, now_str))
                                 new_count += 1
                             except sqlite3.IntegrityError:
@@ -973,7 +978,7 @@ class SQLiteStorageMixin:
             # 获取所有 RSS 数据
             cursor.execute("""
                 SELECT i.id, i.title, i.feed_id, f.name as feed_name,
-                       i.url, i.published_at, i.summary, i.author,
+                       i.url, i.published_at, i.summary, i.author, i.cover_url,
                        i.first_crawl_time, i.last_crawl_time, i.crawl_count
                 FROM rss_items i
                 LEFT JOIN rss_feeds f ON i.feed_id = f.id
@@ -1005,10 +1010,11 @@ class SQLiteStorageMixin:
                     published_at=row[5] or "",
                     summary=row[6] or "",
                     author=row[7] or "",
-                    crawl_time=row[9],
-                    first_time=row[8],
-                    last_time=row[9],
-                    count=row[10],
+                    cover_url=row[8] or "",
+                    crawl_time=row[10],
+                    first_time=row[9],
+                    last_time=row[10],
+                    count=row[11],
                 ))
 
             # 获取最新的抓取时间
@@ -1128,7 +1134,7 @@ class SQLiteStorageMixin:
             # 获取该时间的 RSS 数据
             cursor.execute("""
                 SELECT i.id, i.title, i.feed_id, f.name as feed_name,
-                       i.url, i.published_at, i.summary, i.author,
+                       i.url, i.published_at, i.summary, i.author, i.cover_url,
                        i.first_crawl_time, i.last_crawl_time, i.crawl_count
                 FROM rss_items i
                 LEFT JOIN rss_feeds f ON i.feed_id = f.id
@@ -1161,10 +1167,11 @@ class SQLiteStorageMixin:
                     published_at=row[5] or "",
                     summary=row[6] or "",
                     author=row[7] or "",
-                    crawl_time=row[9],
-                    first_time=row[8],
-                    last_time=row[9],
-                    count=row[10],
+                    cover_url=row[8] or "",
+                    crawl_time=row[10],
+                    first_time=row[9],
+                    last_time=row[10],
+                    count=row[11],
                 ))
 
             # 获取失败的源（针对最新一次抓取）
@@ -1676,7 +1683,7 @@ class SQLiteStorageMixin:
                     placeholders = ",".join("?" * len(rss_ids))
                     rss_cursor.execute(f"""
                         SELECT i.id, i.title, i.feed_id, f.name as feed_name,
-                               i.url, i.published_at
+                               i.url, i.published_at, i.summary, i.cover_url
                         FROM rss_items i
                         LEFT JOIN rss_feeds f ON i.feed_id = f.id
                         WHERE i.id IN ({placeholders})
@@ -1706,6 +1713,8 @@ class SQLiteStorageMixin:
                                 "first_time": info[5] or "",
                                 "last_time": info[5] or "",
                                 "count": 1,
+                                "summary": info[6] or "",
+                                "cover_url": info[7] or "",
                             })
             except Exception:
                 pass  # RSS 库不存在时静默跳过

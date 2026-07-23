@@ -110,36 +110,45 @@ class NotificationDispatcher:
         rss_new_items = copy.deepcopy(rss_new_items) if rss_new_items else None
         standalone_data = copy.deepcopy(standalone_data) if standalone_data else None
 
-        # 收集所有需要翻译的标题
+        # 收集所有需要翻译的标题和摘要
         titles_to_translate = []
-        title_locations = []  # 记录标题位置，用于回填
+        title_locations = []  # 记录位置，用于回填：(loc_type, idx1, idx2, field)
 
         # 1. 热榜标题（scope 开启 且 区域展示）
         if scope.get("HOTLIST", True) and display_regions.get("HOTLIST", True):
             for stat_idx, stat in enumerate(report_data.get("stats", [])):
                 for title_idx, title_data in enumerate(stat.get("titles", [])):
                     titles_to_translate.append(title_data.get("title", ""))
-                    title_locations.append(("stats", stat_idx, title_idx))
+                    title_locations.append(("stats", stat_idx, title_idx, "title"))
 
             # 2. 新增热点标题
             for source_idx, source in enumerate(report_data.get("new_titles", [])):
                 for title_idx, title_data in enumerate(source.get("titles", [])):
                     titles_to_translate.append(title_data.get("title", ""))
-                    title_locations.append(("new_titles", source_idx, title_idx))
+                    title_locations.append(("new_titles", source_idx, title_idx, "title"))
 
-        # 3. RSS 统计标题（结构与 stats 一致：[{word, count, titles: [{title, ...}]}]）
+        # 3. RSS 统计标题 + 摘要（结构与 stats 一致：[{word, count, titles: [{title, ...}]}]）
         if not skip_rss and rss_items and scope.get("RSS", True) and display_regions.get("RSS", True):
             for stat_idx, stat in enumerate(rss_items):
                 for title_idx, title_data in enumerate(stat.get("titles", [])):
                     titles_to_translate.append(title_data.get("title", ""))
-                    title_locations.append(("rss_items", stat_idx, title_idx))
+                    title_locations.append(("rss_items", stat_idx, title_idx, "title"))
+                    # 摘要也需翻译（英文摘要翻译为中文）
+                    summary = title_data.get("summary", "")
+                    if summary and summary.strip():
+                        titles_to_translate.append(summary)
+                        title_locations.append(("rss_items", stat_idx, title_idx, "summary"))
 
-        # 4. RSS 新增标题（结构与 stats 一致）
+        # 4. RSS 新增标题 + 摘要
         if not skip_rss and rss_new_items and scope.get("RSS", True) and display_regions.get("RSS", True) and display_regions.get("NEW_ITEMS", True):
             for stat_idx, stat in enumerate(rss_new_items):
                 for title_idx, title_data in enumerate(stat.get("titles", [])):
                     titles_to_translate.append(title_data.get("title", ""))
-                    title_locations.append(("rss_new_items", stat_idx, title_idx))
+                    title_locations.append(("rss_new_items", stat_idx, title_idx, "title"))
+                    summary = title_data.get("summary", "")
+                    if summary and summary.strip():
+                        titles_to_translate.append(summary)
+                        title_locations.append(("rss_new_items", stat_idx, title_idx, "summary"))
 
         # 5. 独立展示区 - 热榜平台 + RSS 源
         # 统一由 skip_standalone 控制；standalone RSS 是独立数据集，不应被 skip_rss 跳过
@@ -147,13 +156,17 @@ class NotificationDispatcher:
             for plat_idx, platform in enumerate(standalone_data.get("platforms", [])):
                 for item_idx, item in enumerate(platform.get("items", [])):
                     titles_to_translate.append(item.get("title", ""))
-                    title_locations.append(("standalone_platforms", plat_idx, item_idx))
+                    title_locations.append(("standalone_platforms", plat_idx, item_idx, "title"))
 
             # 6. 独立展示区 - RSS 源
             for feed_idx, feed in enumerate(standalone_data.get("rss_feeds", [])):
                 for item_idx, item in enumerate(feed.get("items", [])):
                     titles_to_translate.append(item.get("title", ""))
-                    title_locations.append(("standalone_rss", feed_idx, item_idx))
+                    title_locations.append(("standalone_rss", feed_idx, item_idx, "title"))
+                    summary = item.get("summary", "")
+                    if summary and summary.strip():
+                        titles_to_translate.append(summary)
+                        title_locations.append(("standalone_rss", feed_idx, item_idx, "summary"))
 
         if not titles_to_translate:
             print("[翻译] 没有需要翻译的内容")
@@ -224,24 +237,24 @@ class NotificationDispatcher:
 
         print(f"[翻译] 翻译完成: {result.success_count}/{result.total_count} 成功")
 
-        # 回填翻译结果（仅在翻译文本非空时替换，防止空翻译覆盖原始标题）
-        for i, (loc_type, idx1, idx2) in enumerate(title_locations):
+        # 回填翻译结果（仅在翻译文本非空时替换，防止空翻译覆盖原始内容）
+        for i, (loc_type, idx1, idx2, field) in enumerate(title_locations):
             if i < len(result.results) and result.results[i].success:
                 translated = result.results[i].translated_text
                 if not translated or not translated.strip():
                     continue
                 if loc_type == "stats":
-                    report_data["stats"][idx1]["titles"][idx2]["title"] = translated
+                    report_data["stats"][idx1]["titles"][idx2][field] = translated
                 elif loc_type == "new_titles":
-                    report_data["new_titles"][idx1]["titles"][idx2]["title"] = translated
+                    report_data["new_titles"][idx1]["titles"][idx2][field] = translated
                 elif loc_type == "rss_items" and rss_items:
-                    rss_items[idx1]["titles"][idx2]["title"] = translated
+                    rss_items[idx1]["titles"][idx2][field] = translated
                 elif loc_type == "rss_new_items" and rss_new_items:
-                    rss_new_items[idx1]["titles"][idx2]["title"] = translated
+                    rss_new_items[idx1]["titles"][idx2][field] = translated
                 elif loc_type == "standalone_platforms" and standalone_data:
-                    standalone_data["platforms"][idx1]["items"][idx2]["title"] = translated
+                    standalone_data["platforms"][idx1]["items"][idx2][field] = translated
                 elif loc_type == "standalone_rss" and standalone_data:
-                    standalone_data["rss_feeds"][idx1]["items"][idx2]["title"] = translated
+                    standalone_data["rss_feeds"][idx1]["items"][idx2][field] = translated
 
         return report_data, rss_items, rss_new_items, standalone_data
 

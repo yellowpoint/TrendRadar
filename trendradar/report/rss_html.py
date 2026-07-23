@@ -184,6 +184,26 @@ def render_rss_html_content(
                 margin-bottom: 0;
             }
 
+            .rss-item-body {
+                display: flex;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            .rss-cover {
+                flex-shrink: 0;
+                width: 96px;
+                height: 72px;
+                border-radius: 6px;
+                object-fit: cover;
+                background: #e5e7eb;
+            }
+
+            .rss-text {
+                flex: 1;
+                min-width: 0;
+            }
+
             .rss-meta {
                 display: flex;
                 align-items: center;
@@ -355,6 +375,7 @@ def render_rss_html_content(
             published_at = item.get("published_at", "")
             author = item.get("author", "")
             summary = item.get("summary", "")
+            cover_url = item.get("cover_url", "")
 
             html += """
                     <div class="rss-item">
@@ -368,7 +389,15 @@ def render_rss_html_content(
 
             html += """
                         </div>
-                        <div class="rss-title">"""
+                        <div class="rss-item-body">"""
+
+            if cover_url:
+                escaped_cover = html_escape(cover_url)
+                html += f'<img class="rss-cover" src="{escaped_cover}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'">'
+
+            html += """
+                            <div class="rss-text">
+                                <div class="rss-title">"""
 
             if url:
                 escaped_url = html_escape(url)
@@ -377,14 +406,16 @@ def render_rss_html_content(
                 html += escaped_title
 
             html += """
-                        </div>"""
+                                </div>"""
 
             if summary:
                 escaped_summary = html_escape(summary)
                 html += f"""
-                        <p class="rss-summary">{escaped_summary}</p>"""
+                                <p class="rss-summary">{escaped_summary}</p>"""
 
             html += """
+                            </div>
+                        </div>
                     </div>"""
 
         html += """

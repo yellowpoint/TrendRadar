@@ -43,6 +43,8 @@ TURSO_SCHEMA_STATEMENTS = [
         crawl_date TEXT NOT NULL,
         crawl_time TEXT,
         dedup_key TEXT NOT NULL DEFAULT '',
+        cover_url TEXT DEFAULT '',
+        summary TEXT DEFAULT '',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(source_id, dedup_key)
@@ -141,6 +143,8 @@ class TursoSyncService:
         for col_sql in (
             "ALTER TABLE filtered_items ADD COLUMN published_at TEXT",
             "ALTER TABLE filtered_items ADD COLUMN dedup_key TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE filtered_items ADD COLUMN cover_url TEXT DEFAULT ''",
+            "ALTER TABLE filtered_items ADD COLUMN summary TEXT DEFAULT ''",
         ):
             try:
                 self._post({
@@ -250,6 +254,8 @@ class TursoSyncService:
                             crawl_time TEXT,
                             dedup_key TEXT NOT NULL DEFAULT '',
                             published_at TEXT,
+                            cover_url TEXT DEFAULT '',
+                            summary TEXT DEFAULT '',
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             UNIQUE(source_id, dedup_key)
@@ -260,12 +266,12 @@ class TursoSyncService:
                         INSERT INTO filtered_items_new (
                             title, url, mobile_url, source_id, source_name, source_type,
                             rank, relevance_score, first_crawl_time, last_crawl_time,
-                            crawl_date, crawl_time, dedup_key, published_at, created_at, updated_at
+                            crawl_date, crawl_time, dedup_key, published_at, cover_url, summary, created_at, updated_at
                         )
                         SELECT
                             title, url, mobile_url, source_id, source_name, source_type,
                             rank, relevance_score, first_crawl_time, last_crawl_time,
-                            crawl_date, crawl_time, dedup_key, published_at, created_at, updated_at
+                            crawl_date, crawl_time, dedup_key, published_at, cover_url, summary, created_at, updated_at
                         FROM (
                             SELECT *, ROW_NUMBER() OVER (
                                 PARTITION BY source_id, dedup_key
@@ -427,6 +433,8 @@ class TursoSyncService:
                 - crawl_date (str, 必填, YYYY-MM-DD)
                 - crawl_time (str, 可空, HH:MM)
                 - published_at (str, 可空, 文章真实发布时间 ISO 格式)
+                - cover_url (str, 可空, 封面图 URL)
+                - summary (str, 可空, 新闻简介)
 
         Returns:
             True 表示成功（或无数据），False 表示失败
@@ -458,8 +466,8 @@ class TursoSyncService:
                     INSERT INTO filtered_items
                         (title, url, mobile_url, source_id, source_name, source_type,
                          rank, relevance_score, first_crawl_time, last_crawl_time,
-                         crawl_date, crawl_time, published_at, dedup_key)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         crawl_date, crawl_time, published_at, dedup_key, cover_url, summary)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(source_id, dedup_key) DO UPDATE SET
                         title = excluded.title,
                         url = COALESCE(NULLIF(excluded.url, ''), filtered_items.url),
@@ -472,6 +480,8 @@ class TursoSyncService:
                         crawl_date = excluded.crawl_date,
                         crawl_time = COALESCE(NULLIF(excluded.crawl_time, ''), filtered_items.crawl_time),
                         published_at = COALESCE(NULLIF(excluded.published_at, ''), filtered_items.published_at),
+                        cover_url = COALESCE(NULLIF(excluded.cover_url, ''), filtered_items.cover_url),
+                        summary = COALESCE(NULLIF(excluded.summary, ''), filtered_items.summary),
                         updated_at = CURRENT_TIMESTAMP
                     """,
                     [
@@ -489,6 +499,8 @@ class TursoSyncService:
                         item.get("crawl_time", "") or "",
                         item.get("published_at", "") or item.get("first_time", "") or "",
                         dedup_key,
+                        item.get("cover_url", "") or "",
+                        item.get("summary", "") or "",
                     ],
                 ))
 

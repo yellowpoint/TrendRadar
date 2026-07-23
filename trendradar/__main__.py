@@ -637,6 +637,8 @@ class NewsAnalyzer:
                         "url": item.get("url", ""),
                         "published_at": item.get("published_at", ""),
                         "author": item.get("author", ""),
+                        "summary": item.get("summary", ""),
+                        "cover_url": item.get("cover_url", ""),
                     })
 
             # 限制条数并添加到结果
@@ -885,6 +887,8 @@ class NewsAnalyzer:
             "crawl_date": crawl_date,
             "crawl_time": crawl_time,
             "published_at": published_at,
+            "cover_url": td.get("cover_url", "") or "",
+            "summary": td.get("summary", "") or "",
         }
 
     def _send_notification_if_needed(
@@ -1414,6 +1418,7 @@ class NewsAnalyzer:
                     "published_at": item.published_at,
                     "summary": item.summary,
                     "author": item.author,
+                    "cover_url": item.cover_url,
                 })
 
         # 输出过滤统计

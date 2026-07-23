@@ -30,6 +30,7 @@ class ParsedRSSItem:
     summary: Optional[str] = None
     author: Optional[str] = None
     guid: Optional[str] = None
+    cover_url: Optional[str] = None
 
 
 class RSSParser:
@@ -168,6 +169,17 @@ class RSSParser:
         # GUID
         guid = item_data.get("id", "") or url
 
+        # 封面图：JSON Feed 支持 image / banner 字段
+        cover_url = item_data.get("image") or item_data.get("banner") or ""
+        if isinstance(cover_url, dict):
+            cover_url = cover_url.get("url", "")
+        cover_url = (cover_url or "").strip() or None
+        # 兜底：从 content_html 中提取第一张图片
+        if not cover_url:
+            content_html = item_data.get("content_html", "")
+            if content_html:
+                cover_url = self._extract_first_image(content_html)
+
         return ParsedRSSItem(
             title=title,
             url=url,
@@ -175,6 +187,7 @@ class RSSParser:
             summary=summary or None,
             author=author,
             guid=guid,
+            cover_url=cover_url,
         )
 
     def _parse_iso_date(self, date_str: str) -> Optional[str]:
@@ -247,6 +260,7 @@ class RSSParser:
         summary = self._parse_summary(entry)
         author = self._parse_author(entry)
         guid = entry.get("id") or entry.get("guid", {}).get("value") or url
+        cover_url = self._parse_cover(entry)
 
         return ParsedRSSItem(
             title=title,
@@ -255,6 +269,7 @@ class RSSParser:
             summary=summary,
             author=author,
             guid=guid,
+            cover_url=cover_url,
         )
 
     def _clean_text(self, text: str) -> str:
@@ -342,4 +357,88 @@ class RSSParser:
             if names:
                 return ", ".join(names)
 
+        return None
+
+    def _parse_cover(self, entry: Any) -> Optional[str]:
+        """
+        解析封面图 URL
+
+        优先级：
+        1. media:content（图片类型）
+        2. media:thumbnail
+        3. enclosure（image/* 类型）
+        4. media_text（含图片URL）
+        5. 兜底：从 summary / content HTML 中提取第一张 <img>
+        """
+        # 1. media:content
+        media_content = entry.get("media_content", [])
+        if media_content:
+            for media in media_content:
+                if not isinstance(media, dict):
+                    continue
+                url = media.get("url", "")
+                medium = (media.get("medium") or "").lower()
+                mtype = (media.get("type") or "").lower()
+                if url and (medium == "image" or mtype.startswith("image/") or not medium and not mtype):
+                    return url.strip()
+
+        # 2. media:thumbnail
+        media_thumbnail = entry.get("media_thumbnail", [])
+        if media_thumbnail:
+            for media in media_thumbnail:
+                if isinstance(media, dict) and media.get("url"):
+                    return media["url"].strip()
+
+        # 3. enclosure（仅图片类型）
+        enclosures = entry.get("enclosures", [])
+        if enclosures:
+            for enc in enclosures:
+                if not isinstance(enc, dict):
+                    continue
+                etype = (enc.get("type") or "").lower()
+                if etype.startswith("image/") and enc.get("href"):
+                    return enc["href"].strip()
+
+        # 4. media:text 中可能包含 <img>
+        media_text = entry.get("media_text", [])
+        if media_text:
+            for media in media_text:
+                if isinstance(media, dict):
+                    content = media.get("content", "")
+                    if content:
+                        img = self._extract_first_image(content)
+                        if img:
+                            return img
+
+        # 5. 兜底：从 summary / content HTML 中提取
+        for field in ("summary", "description"):
+            raw = entry.get(field, "")
+            if raw:
+                img = self._extract_first_image(raw)
+                if img:
+                    return img
+
+        content = entry.get("content", [])
+        if content and isinstance(content, list):
+            for c in content:
+                if isinstance(c, dict):
+                    value = c.get("value", "")
+                    if value:
+                        img = self._extract_first_image(value)
+                        if img:
+                            return img
+
+        return None
+
+    @staticmethod
+    def _extract_first_image(html_content: str) -> Optional[str]:
+        """从 HTML 内容中提取第一张图片的 URL"""
+        if not html_content:
+            return None
+        # 匹配 <img src="..." 或 <img src='...'
+        match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', html_content, re.IGNORECASE)
+        if match:
+            url = match.group(1).strip()
+            if url and not url.startswith("data:"):
+                return url
         return None

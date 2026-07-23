@@ -55,6 +55,12 @@ def _print_single_result(result: SourceCheckResult) -> None:
     print(f"   类型: {result.source_type}")
     print(f"   URL/ID: {result.source_url}")
     print(f"   样本数: {result.sample_count}, 命中样本: {result.matched_count}")
+    # RSS 源展示封面图/简介覆盖率（热榜源无此数据）
+    if result.source_type == "rss" and result.sample_count > 0:
+        cover_pct = result.has_cover_count / result.sample_count * 100
+        summary_pct = result.has_summary_count / result.sample_count * 100
+        print(f"   封面图: {result.has_cover_count}/{result.sample_count} ({cover_pct:.0f}%)")
+        print(f"   简介: {result.has_summary_count}/{result.sample_count} ({summary_pct:.0f}%)")
     print(f"   相关度: {result.score:.2f}")
     if result.matched_tags:
         print(f"   命中方向: {', '.join(result.matched_tags)}")
@@ -71,20 +77,29 @@ def _print_single_result(result: SourceCheckResult) -> None:
 def _print_batch_results(results: List[SourceCheckResult]) -> None:
     """以表格形式打印批量结果"""
     print()
-    print("=" * 80)
+    print("=" * 100)
     print("源级筛选批量预检结果")
-    print("=" * 80)
+    print("=" * 100)
 
-    # 表头
-    header = f"{'状态':<4} {'类型':<6} {'名称':<24} {'分数':<6} {'命中/样本':<10} {'建议':<8}"
+    # 表头（RSS 源额外展示封面图/简介覆盖率列）
+    has_rss = any(r.source_type == "rss" and r.success for r in results)
+    if has_rss:
+        header = f"{'状态':<4} {'类型':<6} {'名称':<20} {'分数':<6} {'命中/样本':<10} {'封面图':<10} {'简介':<10} {'建议':<8}"
+        sep_width = 100
+    else:
+        header = f"{'状态':<4} {'类型':<6} {'名称':<24} {'分数':<6} {'命中/样本':<10} {'建议':<8}"
+        sep_width = 80
     print(header)
-    print("-" * 80)
+    print("-" * sep_width)
 
     success_count = 0
     relevant_count = 0
     for r in results:
         if not r.success:
-            print(f"❌   {r.source_type:<6} {r.source_name[:24]:<24} {'-':<6} {'-':<10} 失败")
+            if has_rss:
+                print(f"❌   {r.source_type:<6} {r.source_name[:20]:<20} {'-':<6} {'-':<10} {'-':<10} {'-':<10} 失败")
+            else:
+                print(f"❌   {r.source_type:<6} {r.source_name[:24]:<24} {'-':<6} {'-':<10} 失败")
             print(f"     错误: {r.error}")
             continue
         success_count += 1
@@ -93,12 +108,25 @@ def _print_batch_results(results: List[SourceCheckResult]) -> None:
         if r.relevant:
             relevant_count += 1
         ratio = f"{r.matched_count}/{r.sample_count}"
-        print(
-            f"{icon}   {r.source_type:<6} {r.source_name[:24]:<24} "
-            f"{r.score:.2f}    {ratio:<10} {verdict}"
-        )
+        if has_rss:
+            # RSS 源显示封面图/简介覆盖率，热榜源显示 "-"
+            if r.source_type == "rss" and r.sample_count > 0:
+                cover_col = f"{r.has_cover_count}/{r.sample_count}"
+                summary_col = f"{r.has_summary_count}/{r.sample_count}"
+            else:
+                cover_col = "-"
+                summary_col = "-"
+            print(
+                f"{icon}   {r.source_type:<6} {r.source_name[:20]:<20} "
+                f"{r.score:.2f}    {ratio:<10} {cover_col:<10} {summary_col:<10} {verdict}"
+            )
+        else:
+            print(
+                f"{icon}   {r.source_type:<6} {r.source_name[:24]:<24} "
+                f"{r.score:.2f}    {ratio:<10} {verdict}"
+            )
 
-    print("-" * 80)
+    print("-" * sep_width)
     print(
         f"汇总: 共 {len(results)} 个源, "
         f"成功检查 {success_count} 个, "

@@ -447,6 +447,8 @@ class AIFilterPipeline:
                 "count": r.get("count", 1),
                 "relevance_score": r.get("relevance_score", 0),
                 "source_type": r.get("source_type", "hotlist"),
+                "summary": r.get("summary", ""),
+                "cover_url": r.get("cover_url", ""),
             })
             tag_groups[tag_name]["count"] += 1
 
@@ -574,6 +576,8 @@ class AIFilterPipeline:
                     "published_at": first_time if source_type == "rss" else "",
                     "relevance_score": item.get("relevance_score", 0) or 0,
                     "matched_keyword": tag_name,
+                    "summary": item.get("summary", ""),
+                    "cover_url": item.get("cover_url", ""),
                 }
 
                 if source_type == "rss":

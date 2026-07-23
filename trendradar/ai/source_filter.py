@@ -28,6 +28,10 @@ class SourceCheckResult:
     sample_count: int = 0       # 实际抓到的样本数
     matched_count: int = 0      # AI 判定匹配样本数
 
+    # 字段覆盖率统计（仅 RSS 源有效，用于判断源质量）
+    has_cover_count: int = 0    # 样本中有封面图的条数
+    has_summary_count: int = 0  # 样本中有简介的条数
+
     relevant: bool = False      # 是否值得订阅（score ≥ 0.5）
     score: float = 0.0          # 整体相关度 0~1
     reason: str = ""            # AI 给出的判断理由
@@ -148,17 +152,31 @@ class SourceFilter:
         parsed_items = parsed_items[:sample_size] if sample_size > 0 else parsed_items
 
         samples: List[Dict] = []
+        has_cover = 0
+        has_summary = 0
         for idx, item in enumerate(parsed_items, 1):
+            summary = (item.summary or "")[:200]
+            cover_url = item.cover_url or ""
+            if cover_url:
+                has_cover += 1
+            if summary.strip():
+                has_summary += 1
             samples.append({
                 "index": idx,
                 "title": item.title or "",
-                "summary": (item.summary or "")[:200],
+                "summary": summary,
+                "cover_url": cover_url,
                 "url": item.url or "",
                 "published_at": item.published_at or "",
             })
 
         result.sample_count = len(samples)
-        print(f"[源级筛选] {result.source_name}: 抓取到 {len(samples)} 条样本")
+        result.has_cover_count = has_cover
+        result.has_summary_count = has_summary
+        print(
+            f"[源级筛选] {result.source_name}: 抓取到 {len(samples)} 条样本"
+            f"（封面图 {has_cover}/{len(samples)}，简介 {has_summary}/{len(samples)}）"
+        )
         return samples
 
     # === 热榜平台检查 ===

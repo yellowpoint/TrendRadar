@@ -460,6 +460,36 @@ def render_html_content(
                 color: #7c3aed;
             }
 
+            .news-summary {
+                display: flex;
+                gap: 10px;
+                align-items: flex-start;
+                margin-top: 8px;
+            }
+
+            .news-cover {
+                flex-shrink: 0;
+                width: 80px;
+                height: 60px;
+                border-radius: 6px;
+                object-fit: cover;
+                background: #e5e7eb;
+            }
+
+            .news-summary-text {
+                flex: 1;
+                min-width: 0;
+                font-size: 12px;
+                color: #6b7280;
+                line-height: 1.5;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            body.dark-mode .news-summary-text { color: #9ca3af; }
+
             /* 通用区域分割线样式 */
             .section-divider {
                 margin-top: 32px;
@@ -749,6 +779,26 @@ def render_html_content(
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
+            }
+
+            .rss-item-body {
+                display: flex;
+                gap: 10px;
+                align-items: flex-start;
+            }
+
+            .rss-cover {
+                flex-shrink: 0;
+                width: 80px;
+                height: 60px;
+                border-radius: 6px;
+                object-fit: cover;
+                background: #e5e7eb;
+            }
+
+            .rss-text {
+                flex: 1;
+                min-width: 0;
             }
 
             /* 独立展示区样式 - 复用热点词汇统计区样式 */
@@ -1839,6 +1889,8 @@ def render_html_content(
                 time_display = title_data.get("time_display", "")
                 source_name = title_data.get("source_name", "")
                 is_new = title_data.get("is_new", False)
+                summary = title_data.get("summary", "")
+                cover_url = title_data.get("cover_url", "")
 
                 rss_html += """
                         <div class="rss-item">
@@ -1855,7 +1907,15 @@ def render_html_content(
 
                 rss_html += """
                             </div>
-                            <div class="rss-title">"""
+                            <div class="rss-item-body">"""
+
+                if cover_url:
+                    escaped_cover = html_escape(cover_url)
+                    rss_html += f'<img class="rss-cover" src="{escaped_cover}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'">'
+
+                rss_html += """
+                                <div class="rss-text">
+                                    <div class="rss-title">"""
 
                 escaped_title = html_escape(item_title)
                 if url:
@@ -1865,6 +1925,13 @@ def render_html_content(
                     rss_html += escaped_title
 
                 rss_html += """
+                                    </div>"""
+
+                if summary:
+                    rss_html += f'<p class="rss-summary">{html_escape(summary)}</p>'
+
+                rss_html += """
+                                </div>
                             </div>
                         </div>"""
 
@@ -2081,6 +2148,8 @@ def render_html_content(
                 url = item.get("url", "")
                 published_at = item.get("published_at", "")
                 author = item.get("author", "")
+                summary = item.get("summary", "")
+                cover_url = item.get("cover_url", "")
 
                 standalone_html += f"""
                         <div class="news-item">
@@ -2118,7 +2187,22 @@ def render_html_content(
                     standalone_html += escaped_title
 
                 standalone_html += """
-                                </div>
+                                </div>"""
+
+                # 封面图 + 摘要
+                if cover_url or summary:
+                    standalone_html += '<div class="news-summary">'
+
+                    if cover_url:
+                        escaped_cover = html_escape(cover_url)
+                        standalone_html += f'<img class="news-cover" src="{escaped_cover}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'">'
+
+                    if summary:
+                        standalone_html += f'<span class="news-summary-text">{html_escape(summary)}</span>'
+
+                    standalone_html += '</div>'
+
+                standalone_html += """
                             </div>
                         </div>"""
 

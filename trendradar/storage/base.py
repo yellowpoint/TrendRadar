@@ -79,6 +79,7 @@ class RSSItem:
     published_at: str = ""              # RSS 发布时间（ISO 格式）
     summary: str = ""                   # 摘要/描述
     author: str = ""                    # 作者
+    cover_url: str = ""                 # 封面图 URL
     crawl_time: str = ""                # 抓取时间（HH:MM 格式）
 
     # 统计信息
@@ -96,6 +97,7 @@ class RSSItem:
             "published_at": self.published_at,
             "summary": self.summary,
             "author": self.author,
+            "cover_url": self.cover_url,
             "crawl_time": self.crawl_time,
             "first_time": self.first_time,
             "last_time": self.last_time,
@@ -113,6 +115,7 @@ class RSSItem:
             published_at=data.get("published_at", ""),
             summary=data.get("summary", ""),
             author=data.get("author", ""),
+            cover_url=data.get("cover_url", ""),
             crawl_time=data.get("crawl_time", ""),
             first_time=data.get("first_time", ""),
             last_time=data.get("last_time", ""),

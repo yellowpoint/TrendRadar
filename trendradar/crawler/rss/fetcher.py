@@ -119,6 +119,7 @@ class RSSFetcher:
                     published_at=parsed.published_at or "",
                     summary=parsed.summary or "",
                     author=parsed.author or "",
+                    cover_url=parsed.cover_url or "",
                     crawl_time=crawl_time,
                     first_time=crawl_time,
                     last_time=crawl_time,
